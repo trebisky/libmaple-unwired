@@ -28,7 +28,7 @@
  * @brief USB virtual serial terminal
  */
 
-#include <wirish/usb_serial.h>
+// #include <wirish/usb_serial.h>
 
 #include <string.h>
 #include <stdint.h>
@@ -38,8 +38,110 @@
 #include <libmaple/usb.h>
 #include <libmaple/iwdg.h>
 
-#include <wirish/wirish.h>
+// #include <wirish/wirish.h>
+#include "unwired.h"
 
+#define USB_TIMEOUT 50
+
+/* tjt - as near as I can tell, this whole hook business
+ * was all about boot loaders that I neither have, know
+ * about, nor intend to use.
+ */
+void
+usb_serial_begin (void)
+{
+    usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
+    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
+    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+}
+
+static void
+usb_serial_write ( const char *buf, int len )
+{
+    uint32 txed = 0;
+    uint32 old_txed = 0;
+    uint32 start = millis();
+    uint32 sent = 0;
+
+    if ( ! usb_is_connected(USBLIB) )
+	return;
+    if ( ! usb_is_configured(USBLIB) )
+	return;
+    if ( ! buf )
+        return;
+
+    while ( txed < len && (millis() - start < USB_TIMEOUT) ) {
+        sent = usb_cdcacm_tx((const uint8*)buf + txed, len - txed);
+        txed += sent;
+        if (old_txed != txed) {
+            start = millis();
+        }
+        old_txed = txed;
+    }
+
+
+    if (sent == USB_CDCACM_TX_EPSIZE) {
+        while (usb_cdcacm_is_transmitting() != 0) {
+        }
+        /* flush out to avoid having the pc wait for more data */
+        usb_cdcacm_tx(NULL, 0);
+    }
+}
+
+void
+usb_serial_putc ( uint8 ch )
+{
+    usb_serial_write ( &ch, 1 );
+}
+
+void
+usb_serial_puts ( const char *str )
+{
+    usb_serial_write ( str, strlen(str) );
+}
+
+/* ==================================================== */
+/* ==================================================== */
+/* ==================================================== */
+/* ==================================================== */
+
+#ifdef OLD_CPP_SERIALUSB
+/* --- start old usb_serial.h --- */
+
+#include <wirish/Print.h>
+#include <wirish/boards.h>
+
+/**
+ * @brief Virtual serial terminal.
+ */
+class USBSerial : public Print {
+public:
+    USBSerial(void);
+
+    void begin(void);
+    void end(void);
+
+    uint32 available(void);
+
+    uint32 read(void *buf, uint32 len);
+    uint8  read(void);
+
+    void write(uint8);
+    void write(const char *str);
+    void write(const void*, uint32);
+
+    uint8 getRTS();
+    uint8 getDTR();
+    uint8 isConnected();
+    uint8 pending();
+};
+
+#if BOARD_HAVE_SERIALUSB
+extern USBSerial SerialUSB;
+#endif
+
+
+/* --- start old usb_serial.cpp --- */
 /*
  * Hooks used for bootloader reset signalling
  */
@@ -284,3 +386,5 @@ static void rxHook(unsigned hook, void *ignored) {
 }
 
 #endif  // BOARD_HAVE_SERIALUSB
+
+#endif /* OLD_CPP_SERIALUSB */

@@ -37,6 +37,7 @@ cSRCS_$(d) += board.c
 cSRCS_$(d) += time.c
 cSRCS_$(d) += digital.c
 cSRCS_$(d) += serial.c
+cSRCS_$(d) += serial_usb.c
 cSRCS_$(d) += print.c
 
 sFILES_$(d)   := $(sSRCS_$(d):%=$(d)/%)
