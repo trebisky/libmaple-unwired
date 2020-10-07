@@ -39,6 +39,9 @@ int serial_begin ( int port, int baud );
 void serial_write ( int fd, int ch );
 void serial_putc ( int fd, int ch );
 void serial_puts ( int fd, char *str );
+void print_num ( int fd, int num );
+void print_num_base ( int fd, int n, uint8 base);
+
 
 #ifdef OLD_CPP_SERIAL
 #include <wirish/Print.h>

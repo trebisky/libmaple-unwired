@@ -27,3 +27,15 @@ This may seem cruel and brutal, but it is a hard world.
 It suits my purposes, and the orignal libmaple is still out there
 as well as STM32duino which is derived from it.
 I hope nobody from Leaf Labs that finds this will feel insulted.
+
+-----
+
+One thing I have particularly enjoyed is that I fixed an issue with the
+original libmaple.  I use an STlink SWD dongle to load code into my
+STM32F103 and am used to simply typing "make burn" to load new code without
+having to touch jumpers.  This would not work with the executables I
+made using the original Libmaple.  This was at first confusing, and then
+simply irritating.  This seems to be due to some fiddling done when the
+USB driver is set up that I now bypass (it was making preparations to
+allow the USB driver to handle reset, probably expecting some kind of USB
+based boot loader to be used.)

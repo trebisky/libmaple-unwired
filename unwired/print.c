@@ -29,6 +29,77 @@
 
 #include "serial.h"
 
+void
+serial_puts ( int fd, char *str )
+{
+    while (*str)
+        serial_putc ( fd, *str++ );
+}
+
+/* The usual base 10 case of what follows */
+void
+print_num ( int fd, int n )
+{
+    int digit;
+
+    if (n == 0) {
+        serial_putc ( fd, '0' );
+        return;
+    }
+
+    digit = n % 10;
+    n /= 10;
+    if ( n )
+	print_num ( fd, n );
+
+    serial_putc ( fd, '0' + digit );
+}
+
+/* My hacked version of what is below.
+ * note that it does NOT handle negatives.
+ * Also, I use recursion in lieu of a buffer.
+ */
+void
+print_num_base ( int fd, int n, uint8 base)
+{
+    // unsigned char buf[CHAR_BIT * sizeof(long long)];
+    // int i = 0;
+    int digit;
+
+    if (n == 0) {
+        serial_putc ( fd, '0' );
+        return;
+    }
+
+    digit = n % base;
+    n /= base;
+    if ( n )
+	print_num_base ( fd, n, base );
+
+    serial_putc ( fd, (char) ( digit < 10 ?
+                     '0' + digit :
+                     'A' + digit - 10));
+
+#ifdef notdef
+    while (n > 0) {
+        buf[i++] = n % base;
+        n /= base;
+    }
+
+    for (; i > 0; i--) {
+        print((char)(buf[i - 1] < 10 ?
+                     '0' + buf[i - 1] :
+                     'A' + buf[i - 1] - 10));
+    }
+#endif
+}
+
+
+/* The CPP print stuff is pretty C++ intensive, lots of polymorphism,
+ * so I am not going crazy trying to replicate versions of it all
+ */
+#ifdef OLD_CPP_PRINT
+
 #ifndef LLONG_MAX
 /*
  * Note:
@@ -44,17 +115,6 @@
 #define LLONG_MAX 9223372036854775807LL
 #endif
 
-void
-serial_puts ( int fd, char *str )
-{
-    while (*str)
-        serial_putc ( fd, *str++ );
-}
-
-/* The CPP print stuff is pretty C++ intensive, lots of polymorphism,
- * so I am not going crazy trying to replicate versions of it all
- */
-#ifdef OLD_CPP_PRINT
 /*
  * Public methods
  */
