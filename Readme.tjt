@@ -1,0 +1,245 @@
+This is the "nowire" experiment.  10-3-2020
+
+I began with the libmaple from github and then began
+hacking and pruning with the idea of getting rid of
+C++, wirish, and still running the i2c demo.
+
+I may as a first stepping stone try running a simple
+serial port demo like "hello world".
+
+---------------------------------
+---------------------------------
+
+I renamed wirish --> wirish_ORIG
+I renamed libraries --> libraries_ORIG
+
+I edited the Makefile commenting out reference to these,
+using #tjt# to make it clear what I had commented out.
+
+Now the build trips over main.cpp
+
+I create Tom_ORIG directory and copy all the clutter of
+cpp, c, and such files into it.
+
+I edit build-targets.mk and replace:
+
+#SRC_FILES = main.cpp
+SRC_FILES = main.c
+
+This is not quite enough, I need to do this:
+
+#tjt#SRC_FILES = main.cpp
+#tjt#OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.cpp=.o))
+SRC_FILES = main.c
+OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.c=.o))
+
+I create main.c with just a void routine main_street()
+for now.
+
+Now I get a link error:
+
+undefined symbol `__start__' referenced in expression
+
+This used to be provided by wirish/start.S
+
+---------
+
+Copy wirish, delete all the cpp files.
+Edit rules.mk to get rid of references to cpp file
+Edit rules.mk to get rid of references board stuff
+    (board stuff is also cpp)
+
+Edit Makefile to reverse what I did above and re-enable wirish
+
+Now the link yields this error:
+
+wirish/start_c.c:100: undefined reference to `main'
+
+I can fix this by hacking my main.c to have main() rather than main_street()
+
+*** !!! and it works, I get a valid link (although main doesn't do anything).
+This is what I hoped, namely that "wirish" was a layer on top of libmaple that
+I could peel off.
+
+Now the job is to make main.c actually do something interesting.
+Either blink an LED or write "hello" via the uart.
+
+---------
+
+I copied my "tom_blink.c" to main.c.  This builds, compiles and runs.
+It also doesn't have the weird problem with having to move the BOOT jumper.
+I can burn code over and over without an issue, as I am used to doing.
+
+However, this is just self contained code and not calling anything in libmaple.
+
+---------
+
+I rename "examples" to examples_ORIG
+I create the directory examples_TOM
+I shove my main.c there as blink1.c
+I get blinky.cpp out of examples_ORIG and make it main.c
+
+Now I get warnings about:
+
+BOARD_LED_PIN
+pinMode(BOARD_LED_PIN, OUTPUT);
+togglePin(BOARD_LED_PIN);
+
+BOARD_LED_PIN is defined in  wirish/boards/maple_mini/include/board/board.h
+
+#define BOARD_LED_PIN             14
+
+The function togglePin is defined in wirish_ORIG/wirish_digital.cpp
+The function pinMode is defined in wirish/stm32f1/wirish_digital.cpp
+prototypes are in wirish/include/wirish/io.h
+
+We will also need PIN_MAP which is in: wirish/boards/maple_mini/board.cpp
+
+This is discouraging, but this is just the sort of thing we are doing this to
+find out about.
+
+---------------------------------
+---------------------------------
+
+After a nights sleep it was good to step back and think about what I have learned
+and where this is going.
+
+-- It looks like in the original scheme, the examples only call functions
+   in the "wirish" layer.  The fact that I have had to monkey around with the
+   "-I" list in the makefile to pull in the libmaple include files is one of
+   the most suggestive things.
+
+-- for example the "blinky" demo only includes <wirish/wirish.h>
+   the i2c-mcp4725 demo also includes <libmaple/i2c.h>
+   This is the general pattern for all of the demos
+
+
+-- I am considering replacing "wirish" with "unwired" as my own layer, strictly
+   in C rather than C++.  A lot of the wirish code is just C anyway and can
+   just be copied.
+
+---------
+
+Where is <wirish/wirish.h>
+Searching with locate indicates it is in wirish/include/wirish/wirish.h
+Why can't the build find it?
+
+It looks like we need -Iwirish/include; and when I do make V=1 in the original release,
+I see just that in the compile options.
+
+arm-none-eabi-g++ -Os -g3 -gdwarf-2 -nostdlib -ffunction-sections -fdata-sections -Wl,--gc-sections  -mcpu=cortex-m3 -march=armv7-m -mthumb -DBOARD_maple_mini -DMCU_STM32F103CB -DERROR_LED_PORT=GPIOB -DERROR_LED_PIN=1 -DVECT_TAB_BASE -I./libmaple/include/libmaple -I./wirish/include/wirish -I./libraries  -DBOOTLOADER_maple  -fno-rtti -fno-exceptions -Wall  -mcpu=cortex-m3 -march=armv7-m -mthumb -DBOARD_maple_mini -DMCU_STM32F103CB -DERROR_LED_PORT=GPIOB -DERROR_LED_PIN=1 -DVECT_TAB_BASE -I./libmaple/include/libmaple -I./wirish/include/wirish -I./libraries   -I./libmaple/include -I./libmaple/stm32f1/include -I./wirish/include -I./wirish/boards/maple_mini/include -o build/main.o -c main.cpp
+
+When I do a make V=1 in my current working directory, I get:
+
+arm-none-eabi-gcc -Os -g3 -gdwarf-2 -nostdlib -ffunction-sections -fdata-sections -Wl,--gc-sections  -mcpu=cortex-m3 -march=armv7-m -mthumb -DBOARD_maple_mini -DMCU_STM32F103CB -DERROR_LED_PORT=GPIOB -DERROR_LED_PIN=1 -DVECT_TAB_BASE -I./libmaple/include/libmaple -I./libmaple/include -I./libmaple/stm32f1/include -I./wirish/include/wirish -DBOOTLOADER_maple  -MMD -MP -MF build/main.d -MT build/main.o -o build/main.o -c main.c
+
+So clearly I have broken something in the make system
+
+---- After taking a break, I have a strong hunch.
+The original build is compiling main.cpp and the new build is compiling main.c
+It only stands to reason that there are different rules for cpp versus c.
+
+I added a rule to build-targets.mk for .c files and this (with some other fiddling)
+got me to the next issue.
+
+I am also taking time out to study the build system.
+The maple guys did good work.  Clearly in the top 10 percent of their class.
+Their use of make is worth studying for education as well as for getting my
+project done, and bumping up my already good make skills makes good sense.
+
+------
+
+The big issue now is that my main.c includes wirish/wirish.h, but this has C++ stuff it it,
+as does many of the files that it pulls in.  This is a bigger issue for certain.
+I may have to tackle my "unwired" directory and pull in unwired/unwired.h (or just unwired.h)
+This will require some sweeping changes in the Make system, but I don't have to tackle
+all of wirish.h at once.
+
+I introduce wirish/include/unwired.h
+I strip down main.c to just call delay(x).
+This is provided by wirish/include/wirish/wirish_time.h
+    and wirish/wirish_time.cpp
+
+I copy wirish_time.cpp to time.c and start hacking.
+
+Quickly I am getting into the usual tangle of include files.
+And I start asking, why?
+The maple code base has the unfortunate allergy of not wanting
+to put .c and .h files in the same directory.
+And I say the heck with that.
+We will see how this goes, but ultimately I so no reason
+that all the "unwired" stuff cannot just be in the one directory.
+
+I typdef bool as int to allow some C++ prototypes to work as is.
+
+This "all in one directory" does seem like a good way to go.
+At some point unwired.h may just hold prototypes.
+
+Some prototypes in io.h have default values (C++ trickery)
+such as:
+
+uint8 isButtonPressed(uint8 pin=BOARD_BUTTON_PIN ....
+
+We clean up these prototypes, and then some calls pop up without arguments
+and we modify the calls themselves.
+
+--------------
+
+PIN_MAP
+
+This is in board.c
+
+We get into hot water because the compiler doesn't like GPIOB and such.
+I don't actually like this name much myself.
+
+This is actually a global variable (a pointer) declared in stm32f1/gpio.c as:
+
+gpio_dev* const GPIOB = &gpiob;
+
+What we need in board.c is something like
+
+extern gpio_dev *GPIOB;
+
+And it would be great if it was in an include file somewhere.
+And it is!
+It can be found in ./libmaple/stm32f1/include/series/gpio.h
+
+extern struct gpio_dev* const GPIOB;
+
+I figured out a way to plug in the device addresses at run time with some
+code additions to board.c -- this now has an initializer that must be called.
+
+--------------
+
+boards.cpp  --> init.c
+
+It turns out this calls a bunch of initialization routines in libmaple.
+It also has a lot of C++ jive.  I copy it to init.c and comment out the bulk
+of it.  I can also use this to call my pin_map initializer.
+
+-----------
+
+So I got lazy with these notes.  I got the blink demo working, then moved on
+to hardware serial.  I began a test by just printing the 'x' character in a loop.
+Once that worked, I looked at Print.cpp, which is heavy C++, so I basically
+started just coding my own routines.  Did enough to get a puts routine
+and print "hello out there".
+
+Now it is on to USB serial.
+The following two definitions indicate that we have serial USB>
+
+unwired/maple_mini.h:#define BOARD_USB_DISC_DEV        GPIOB
+unwired/maple_mini.h:#define BOARD_USB_DISC_BIT        9
+
+These are tested via this macro:
+
+unwired/boards.h:#define BOARD_HAVE_SERIALUSB (defined(BOARD_USB_DISC_DEV) && \
+unwired/boards.h:                              defined(BOARD_USB_DISC_BIT))
+
+usb_serial.cpp has code to detect a reset sequence, or so it says.
+
+One of the puzzles I have been waitig to solve is why my ST-Link cannot just reset
+the chip and load code like I can with my own demos.  So far it is giving me no
+trouble, but maybe the usb_serial code is what is going to stir up trouble.
+
+# THE END
