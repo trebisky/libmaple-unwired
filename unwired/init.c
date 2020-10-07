@@ -169,17 +169,6 @@ board_setup_usb ( void )
     // usb_serial_begin ();
 }
 
-/* Also moved here from stm32f1_setup.c
- * just so we can see everything at a glance.
- */
-void
-series_init ( void )
-{
-    // Initialize AFIO here, too, so peripheral remaps and external
-    // interrupts work out of the box.
-    afio_init();
-}
-
 static void
 timer_default_config ( timer_dev *dev )
 {
@@ -245,6 +234,17 @@ board_setup_adcs ( void )
     adc_foreach(adc_default_config);
 }
 
+/* Also moved here from stm32f1_setup.c
+ * just so we can see everything at a glance.
+ */
+static void
+series_init ( void )
+{
+    // Initialize AFIO here, too, so peripheral remaps and external
+    // interrupts work out of the box.
+    afio_init();
+}
+
 void
 init ( void )
 {
@@ -257,8 +257,14 @@ init ( void )
     systick_init(SYSTICK_RELOAD_VAL);
     board_setup_gpio ();
     board_setup_adcs ();
+    board_setup_timers ();
     board_setup_usb ();
-    series_init ();
+
+    // For some reason this is what plays hob
+    // with my ability to use ST-link and get a reset
+    // with full convenience.
+    // Note above that this simply calls afio_init()
+    // series_init ();
 
     boardInit();
 

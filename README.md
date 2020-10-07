@@ -35,7 +35,6 @@ original libmaple.  I use an STlink SWD dongle to load code into my
 STM32F103 and am used to simply typing "make burn" to load new code without
 having to touch jumpers.  This would not work with the executables I
 made using the original Libmaple.  This was at first confusing, and then
-simply irritating.  This seems to be due to some fiddling done when the
-USB driver is set up that I now bypass (it was making preparations to
-allow the USB driver to handle reset, probably expecting some kind of USB
-based boot loader to be used.)
+simply irritating.
+It is the call to afio_init() that screws things up.
+I don't know why yet.

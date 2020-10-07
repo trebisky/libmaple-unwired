@@ -46,6 +46,9 @@
 /* tjt - as near as I can tell, this whole hook business
  * was all about boot loaders that I neither have, know
  * about, nor intend to use.
+ * I thought this might have been what was causing weird
+ * problems with STlink reset booting, but it isn't.
+ * Whatever the case, I am not using USB boot loaders.
  */
 void
 usb_serial_begin (void)
