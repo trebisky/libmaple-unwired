@@ -155,6 +155,96 @@ board_setup_clocks ( void )
     rcc_switch_sysclk(RCC_CLKSRC_PLL);
 }
 
+/* Moved here from stm32f1_setup.c so I can comment on it.
+ * I could call my own routine usb_serial_begin(), but I see
+ *  no point in doing that.  The maple code did this in order
+ *  to set up hooks for various boot loaders.  I don't use those
+ *  at all, so I just call the "begin" routine if I actually
+ *  intend to use USB serial.
+ */
+void
+board_setup_usb ( void )
+{
+    // SerialUSB.begin();
+    // usb_serial_begin ();
+}
+
+/* Also moved here from stm32f1_setup.c
+ * just so we can see everything at a glance.
+ */
+void
+series_init ( void )
+{
+    // Initialize AFIO here, too, so peripheral remaps and external
+    // interrupts work out of the box.
+    afio_init();
+}
+
+static void
+timer_default_config ( timer_dev *dev )
+{
+    timer_adv_reg_map *regs = (dev->regs).adv;
+    const uint16 full_overflow = 0xFFFF;
+    const uint16 half_duty = 0x8FFF;
+
+    timer_init(dev);
+    timer_pause(dev);
+
+    regs->CR1 = TIMER_CR1_ARPE;
+    regs->PSC = 1;
+    regs->SR = 0;
+    regs->DIER = 0;
+    regs->EGR = TIMER_EGR_UG;
+    switch (dev->type) {
+    case TIMER_ADVANCED:
+        regs->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF;
+        // fall-through
+    case TIMER_GENERAL:
+        timer_set_reload(dev, full_overflow);
+        for (uint8 channel = 1; channel <= 4; channel++) {
+            if (timer_has_cc_channel(dev, channel)) {
+                timer_set_compare(dev, channel, half_duty);
+                timer_oc_set_mode(dev, channel, TIMER_OC_MODE_PWM_1,
+                                  TIMER_OC_PE);
+            }
+        }
+        // fall-through
+    case TIMER_BASIC:
+        break;
+    }
+
+    timer_generate_update(dev);
+    timer_resume(dev);
+}
+
+/* from below */
+static void
+board_setup_timers(void)
+{
+    timer_foreach ( timer_default_config );
+}
+
+extern adc_smp_rate w_adc_smp;
+extern adc_prescaler w_adc_pre;
+
+static void
+adc_default_config ( const adc_dev *dev )
+{
+    adc_enable_single_swstart(dev);
+    // adc_set_sample_rate(dev, wirish::priv::w_adc_smp);
+    adc_set_sample_rate(dev, w_adc_smp);
+}
+
+/* from below */
+static void
+board_setup_adcs ( void )
+{
+    //adc_set_prescaler (wirish::priv::w_adc_pre);
+    adc_set_prescaler ( w_adc_pre );
+
+    adc_foreach(adc_default_config);
+}
+
 void
 init ( void )
 {
@@ -166,6 +256,9 @@ init ( void )
     setup_nvic();
     systick_init(SYSTICK_RELOAD_VAL);
     board_setup_gpio ();
+    board_setup_adcs ();
+    board_setup_usb ();
+    series_init ();
 
     boardInit();
 
@@ -175,10 +268,10 @@ init ( void )
     -- setup_nvic();
     -- systick_init(SYSTICK_RELOAD_VAL);
     -- wirish::priv::board_setup_gpio();
-    wirish::priv::board_setup_adcs();
-    wirish::priv::board_setup_timers();
-    wirish::priv::board_setup_usb();
-    wirish::priv::series_init();
+    -- wirish::priv::board_setup_adcs();
+    -- wirish::priv::board_setup_timers();
+    -- wirish::priv::board_setup_usb();
+    -- wirish::priv::series_init();
     -- boardInit();
     */
 }
