@@ -41,6 +41,12 @@
 // #include <wirish/wirish.h>
 #include "unwired.h"
 
+/* These routines are never intended to be called directly,
+ * so I don't provide public prototypes.
+ * The intent is that they will be called from routines in serial.c
+ * tjt
+ */
+
 #define USB_TIMEOUT 50
 
 /* tjt - as near as I can tell, this whole hook business
@@ -101,6 +107,37 @@ void
 usb_serial_puts ( const char *str )
 {
     usb_serial_write ( str, strlen(str) );
+}
+
+int
+usb_serial_available ( void )
+{
+    return usb_cdcacm_data_available();
+}
+
+/* blocks */
+static int
+usb_serial_readbuf ( void *buf, int len )
+{
+    int rxed = 0;
+
+    if (!buf)
+        return 0;
+
+    while ( rxed < len ) {
+        rxed += usb_cdcacm_rx ( (char *)buf + rxed, len - rxed);
+    }
+
+    return rxed;
+}
+
+/* Blocks forever until 1 byte is received */
+int
+usb_serial_getc ( void )
+{
+    char b;
+    usb_serial_readbuf ( &b, 1 );
+    return b;
 }
 
 /* ==================================================== */

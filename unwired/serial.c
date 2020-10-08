@@ -42,6 +42,11 @@
 #include <libmaple/timer.h>
 #include <libmaple/usart.h>
 
+void usb_serial_begin ( void );
+char usb_serial_getc ( void );
+void usb_serial_putc ( char );
+int usb_serial_available ( void );
+
 // pins are defined in wirish/boards/maple_mini/include/board/board.h
 
 /* The STM32F1 has 3 uarts (1,2,3) and USB */
@@ -98,8 +103,10 @@ serial_begin ( int port, int baud )
 	    si->rx_pin = BOARD_USART3_RX_PIN;
 	}
 
+	/* ignores baud rate */
 	if ( port == SERIAL_USB ) {
 	    si->type = USB_UART;
+	    usb_serial_begin ();
 	    return NUM_SERIAL-1;
 	}
 
@@ -129,7 +136,10 @@ serial_begin ( int port, int baud )
 void
 serial_write ( int fd, int ch )
 {
-	usart_putc ( serial_info[fd].dev, ch );
+	if ( serial_info[fd].type == USB_UART )
+	    usb_serial_putc ( ch );
+	else
+	    usart_putc ( serial_info[fd].dev, ch );
 }
 
 void
@@ -144,36 +154,45 @@ serial_putc ( int fd, int ch )
 int
 serial_available ( int fd )
 {
-	return usart_data_available ( serial_info[fd].dev );
+	if ( serial_info[fd].type == USB_UART )
+	    return usb_serial_available ();
+	else
+	    return usart_data_available ( serial_info[fd].dev );
 }
 
 void
 serial_flush ( int fd )
 {
-	usart_reset_rx ( serial_info[fd].dev );
+	if ( serial_info[fd].type == HW_UART )
+	    usart_reset_rx ( serial_info[fd].dev );
 }
 
-
-uint8
-serial_read ( int fd )
-{
-	// avoid confusion
-	while ( ! serial_available ( fd ) )
-	    ;
-
-	return usart_getc ( serial_info[fd].dev );
-}
 
 uint8
 serial_getc ( int fd )
 {
 	int rv;
 
-	// allow confusion
-	rv = usart_getc ( serial_info[fd].dev );
+	if ( serial_info[fd].type == USB_UART ) {
+	    rv = usb_serial_getc ();
+	} else {
+	    // avoid confusion
+	    while ( ! serial_available ( fd ) )
+		;
+	    rv = usart_getc ( serial_info[fd].dev );
+	}
+
 	if ( rv == '\r' )
 	    rv = '\n';
 	return rv;
+}
+
+/* synonym */
+uint8
+serial_read ( int fd )
+{
+
+	return serial_getc ( fd );
 }
 
 /* -------------------------------------------------- */

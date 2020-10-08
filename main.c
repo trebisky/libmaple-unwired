@@ -1,43 +1,66 @@
-// Simple serial port test
-// spit out endless "x" characters.
-// Also LED blinking to reassure us the code is running.
+// Tests the SysTick enable/disable functions
 
-// The STM32F103 has 3 serial ports, so we can call
-// serial_begin with 1,2, or 3.
-
-// #include <wirish/wirish.h>
 #include <unwired.h>
+#include <libmaple/systick.h>
 
-void
-echo ( int fd )
-{
-    for ( ;; ) {
-	while ( ! serial_available ( fd ) )
-	    ;
-        serial_putc ( fd, serial_getc(fd) );
-    }
-}
+// tjt -- we ain't got no button
+// so we code something similar using a keystroke
+
+int enable = 1;
 
 void
 main(void)
 {
     int fd;
+    int c;
     int count;
+    int i;
 
     pinMode(BOARD_LED_PIN, OUTPUT);
 
-    // Serial1.begin(115200);
-    fd = serial_begin ( SERIAL_1, 115200 );
-    echo ( fd );
+    // fd = serial_begin ( SERIAL_1, 115200 );
 
-    for ( count=1; ; count++ ) {
-        // serial_write ( fd, 'x' );
-        serial_puts ( fd, "Hello out there " );
+    // With the original Maple code, my linux system
+    // will identify this as /dev/ttyACM0
+    //  kernel: usb 1-1.1.1: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+    //  kernel: usb 1-1.1.1: Product: Maple
+    //  kernel: usb 1-1.1.1: Manufacturer: LeafLabs
+    //  kernel: cdc_acm 1-1.1.1:1.0: ttyACM0: USB ACM device
+
+    fd = serial_begin ( SERIAL_USB, 999 );
+
+    for ( ;; ) {
+
+	toggleLED();
+
+#ifdef notdef
+	// An artificial delay
+	// This works, but it is really fast.
+	for(i = 0; i < 150000; i++)
+	    ;
+#endif
+	delay ( 400 );
+
+	count = millis ();
+        serial_puts ( fd, "Systick count = " );
 	serial_print_num ( fd, count );
 	serial_putc ( fd, '\n' );
 
-	togglePin(BOARD_LED_PIN);
-	delay ( 1000 );
+	if ( ! serial_available ( fd ) )
+	    continue;
+
+        c = serial_getc(fd);
+
+        if (enable) {
+            systick_disable();
+            serial_puts ( fd, "-- Disabling SysTick\n");
+	    enable = 0;
+        } else {
+            serial_puts ( fd, "-- Re-enabling SysTick\n");
+            systick_enable();
+	    enable = 1;
+        }
+
     }
 }
 
