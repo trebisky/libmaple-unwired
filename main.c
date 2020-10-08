@@ -8,13 +8,15 @@
 // #include <wirish/wirish.h>
 #include <unwired.h>
 
-#ifdef notdef
-void loop() {
-    while (Serial1.available()) {
-        Serial1.write(Serial1.read());
+void
+echo ( int fd )
+{
+    for ( ;; ) {
+	while ( ! serial_available ( fd ) )
+	    ;
+        serial_putc ( fd, serial_getc(fd) );
     }
 }
-#endif
 
 void
 main(void)
@@ -25,12 +27,13 @@ main(void)
     pinMode(BOARD_LED_PIN, OUTPUT);
 
     // Serial1.begin(115200);
-    fd = serial_begin (1,115200);
+    fd = serial_begin ( SERIAL_1, 115200 );
+    echo ( fd );
 
     for ( count=1; ; count++ ) {
         // serial_write ( fd, 'x' );
         serial_puts ( fd, "Hello out there " );
-	print_num ( fd, count );
+	serial_print_num ( fd, count );
 	serial_putc ( fd, '\n' );
 
 	togglePin(BOARD_LED_PIN);

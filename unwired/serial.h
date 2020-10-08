@@ -35,13 +35,26 @@
 
 #include <libmaple/libmaple_types.h>
 
+#define SERIAL_1	1
+#define SERIAL_2	2
+#define SERIAL_3	3
+#define SERIAL_USB	100
+
 int serial_begin ( int port, int baud );
 void serial_write ( int fd, int ch );
 void serial_putc ( int fd, int ch );
 void serial_puts ( int fd, char *str );
-void print_num ( int fd, int num );
-void print_num_base ( int fd, int n, uint8 base);
+void serial_print_num ( int fd, int num );
+void serial_print_hex ( int fd, int num );
+void serial_print_num_base ( int fd, int n, uint8 base);
+int serial_available ( int fd );
+void serial_flush ( int fd );
+uint8 serial_read ( int fd );
+uint8 serial_getc ( int fd );
 
+/* ------------------------------------------------------------- */
+/* ------------------------------------------------------------- */
+/* ------------------------------------------------------------- */
 
 #ifdef OLD_CPP_SERIAL
 #include <wirish/Print.h>

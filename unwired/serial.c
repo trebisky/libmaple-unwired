@@ -82,20 +82,25 @@ serial_begin ( int port, int baud )
 	si = &serial_info[fd];
 	si->type = HW_UART;
 
-	if ( port == 1 ) {
+	if ( port == SERIAL_1 ) {
 	    si->dev = USART1;
 	    si->tx_pin = BOARD_USART1_TX_PIN;
 	    si->rx_pin = BOARD_USART1_RX_PIN;
 	}
-	if ( port == 2 ) {
+	if ( port == SERIAL_2 ) {
 	    si->dev = USART2;
 	    si->tx_pin = BOARD_USART2_TX_PIN;
 	    si->rx_pin = BOARD_USART2_RX_PIN;
 	}
-	if ( port == 3 ) {
+	if ( port == SERIAL_3 ) {
 	    si->dev = USART3;
 	    si->tx_pin = BOARD_USART3_TX_PIN;
 	    si->rx_pin = BOARD_USART3_RX_PIN;
+	}
+
+	if ( port == SERIAL_USB ) {
+	    si->type = USB_UART;
+	    return NUM_SERIAL-1;
 	}
 
 	ASSERT(baud <= si->dev->max_baud);
@@ -124,10 +129,7 @@ serial_begin ( int port, int baud )
 void
 serial_write ( int fd, int ch )
 {
-	struct serial_info *si;
-
-	si = &serial_info[fd];
-	usart_putc ( si->dev, ch );
+	usart_putc ( serial_info[fd].dev, ch );
 }
 
 void
@@ -138,6 +140,45 @@ serial_putc ( int fd, int ch )
 	    serial_write ( fd, '\r' );
 }
 
+/* This does not block */
+int
+serial_available ( int fd )
+{
+	return usart_data_available ( serial_info[fd].dev );
+}
+
+void
+serial_flush ( int fd )
+{
+	usart_reset_rx ( serial_info[fd].dev );
+}
+
+
+uint8
+serial_read ( int fd )
+{
+	// avoid confusion
+	while ( ! serial_available ( fd ) )
+	    ;
+
+	return usart_getc ( serial_info[fd].dev );
+}
+
+uint8
+serial_getc ( int fd )
+{
+	int rv;
+
+	// allow confusion
+	rv = usart_getc ( serial_info[fd].dev );
+	if ( rv == '\r' )
+	    rv = '\n';
+	return rv;
+}
+
+/* -------------------------------------------------- */
+/* -------------------------------------------------- */
+/* -------------------------------------------------- */
 
 #ifdef OLD_CPP_SERIAL
 #define DEFINE_HWSERIAL(name, n)                                   \
@@ -159,6 +200,7 @@ DEFINE_HWSERIAL(Serial4, 4);
 #endif
 #if BOARD_HAVE_UART5
 DEFINE_HWSERIAL(Serial5, 5);
+
 #endif
 #if BOARD_HAVE_USART6
 DEFINE_HWSERIAL(Serial6, 6);

@@ -38,7 +38,7 @@ serial_puts ( int fd, char *str )
 
 /* The usual base 10 case of what follows */
 void
-print_num ( int fd, int n )
+serial_print_num ( int fd, int n )
 {
     int digit;
 
@@ -50,7 +50,7 @@ print_num ( int fd, int n )
     digit = n % 10;
     n /= 10;
     if ( n )
-	print_num ( fd, n );
+	serial_print_num ( fd, n );
 
     serial_putc ( fd, '0' + digit );
 }
@@ -60,7 +60,7 @@ print_num ( int fd, int n )
  * Also, I use recursion in lieu of a buffer.
  */
 void
-print_num_base ( int fd, int n, uint8 base)
+serial_print_num_base ( int fd, int n, uint8 base)
 {
     // unsigned char buf[CHAR_BIT * sizeof(long long)];
     // int i = 0;
@@ -74,7 +74,7 @@ print_num_base ( int fd, int n, uint8 base)
     digit = n % base;
     n /= base;
     if ( n )
-	print_num_base ( fd, n, base );
+	serial_print_num_base ( fd, n, base );
 
     serial_putc ( fd, (char) ( digit < 10 ?
                      '0' + digit :
