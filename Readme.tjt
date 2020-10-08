@@ -242,4 +242,36 @@ One of the puzzles I have been waitig to solve is why my ST-Link cannot just res
 the chip and load code like I can with my own demos.  So far it is giving me no
 trouble, but maybe the usb_serial code is what is going to stir up trouble.
 
+No!!  I found it.  It had nothing to do with USB.
+It was a call to disableDebugPorts that was intended to make the pins
+dedicated to SWD available for general use.  This is not what I want,
+so I comment this out (and do so in the regular Maple_min code I use as well).
+It is nice to find and fix this so I can download anytime from the keyboard without
+having to move jumpers back and forth and press the reset button.
+
+Back to hands off downloading and rebooting.  Hooray!!
+
+-----
+
+Now I am trying to get usb_serial to work.
+I have commented some things out and have clearly broken something.
+
+I just rebuilt my blink demo with the vanilla original libmaple and when I boot it up
+and plug in USB, voila -- it identifies itself as a USB gadget even though my
+application does nothing with USB nor does it ever intend to.   I see on my
+linux system:
+
+Oct  8 12:31:41 trona kernel: usb 1-1.1.1: new full-speed USB device number 7 using ehci-pci
+Oct  8 12:31:41 trona kernel: usb 1-1.1.1: New USB device found, idVendor=1eaf, idProduct=0004, bcdDevice= 2.00
+Oct  8 12:31:41 trona kernel: usb 1-1.1.1: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+Oct  8 12:31:41 trona kernel: usb 1-1.1.1: Product: Maple
+Oct  8 12:31:41 trona kernel: usb 1-1.1.1: Manufacturer: LeafLabs
+Oct  8 12:31:41 trona kernel: cdc_acm 1-1.1.1:1.0: ttyACM0: USB ACM device
+
+In my file unwired/init.c I had commented out the call to usb_serial_begin()
+in board_setup_usb ().  Let's uncomment that and see if having this initialized right
+at boot time makes a difference.
+
+Indeed it does.  I rebuild, reboot, and then plug in the cable and get the above as I should
+
 # THE END

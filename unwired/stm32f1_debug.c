@@ -34,6 +34,12 @@
 
 #include <libmaple/gpio.h>
 
+// tjt - note that if you disable the debug port pins,
+// you will be able to use them for other purposes,
+// BUT this is what trashes the ability to conveniently
+// download code via a ST-link gadget.
+// I prefer to leave these enabled.
+
 void disableDebugPorts(void) {
     afio_cfg_debug_ports(AFIO_DEBUG_NONE);
 }

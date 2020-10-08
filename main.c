@@ -12,6 +12,7 @@ void
 main(void)
 {
     int fd;
+    int fds;
     int c;
     int count;
     int i;
@@ -19,6 +20,8 @@ main(void)
     pinMode(BOARD_LED_PIN, OUTPUT);
 
     // fd = serial_begin ( SERIAL_1, 115200 );
+    fds = serial_begin ( SERIAL_1, 115200 );
+    serial_puts ( fds, "-- Starting\n");
 
     // With the original Maple code, my linux system
     // will identify this as /dev/ttyACM0
@@ -28,6 +31,12 @@ main(void)
     //  kernel: cdc_acm 1-1.1.1:1.0: ttyACM0: USB ACM device
 
     fd = serial_begin ( SERIAL_USB, 999 );
+    serial_puts ( fd, "-- USB Starting\n");
+
+    serial_puts ( fds, "-- after USB serial begin\n");
+    serial_puts ( fds, "USB fd = " );
+    serial_print_num ( fds, fd );
+    serial_putc ( fds, '\n' );
 
     for ( ;; ) {
 
@@ -41,10 +50,16 @@ main(void)
 #endif
 	delay ( 400 );
 
+	serial_puts ( fds, "-- after delay\n");
+
 	count = millis ();
         serial_puts ( fd, "Systick count = " );
+	serial_puts ( fds, "-- after 1\n");
 	serial_print_num ( fd, count );
+	serial_puts ( fds, "-- after 2\n");
 	serial_putc ( fd, '\n' );
+
+	serial_puts ( fds, "-- after systick message\n");
 
 	if ( ! serial_available ( fd ) )
 	    continue;

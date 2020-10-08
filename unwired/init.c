@@ -155,20 +155,6 @@ board_setup_clocks ( void )
     rcc_switch_sysclk(RCC_CLKSRC_PLL);
 }
 
-/* Moved here from stm32f1_setup.c so I can comment on it.
- * I could call my own routine usb_serial_begin(), but I see
- *  no point in doing that.  The maple code did this in order
- *  to set up hooks for various boot loaders.  I don't use those
- *  at all, so I just call the "begin" routine if I actually
- *  intend to use USB serial.
- */
-void
-board_setup_usb ( void )
-{
-    // SerialUSB.begin();
-    // usb_serial_begin ();
-}
-
 static void
 timer_default_config ( timer_dev *dev )
 {
@@ -245,6 +231,8 @@ series_init ( void )
     afio_init();
 }
 
+extern void usb_serial_begin ();
+
 void
 init ( void )
 {
@@ -258,15 +246,26 @@ init ( void )
     board_setup_gpio ();
     board_setup_adcs ();
     board_setup_timers ();
-    board_setup_usb ();
 
-    // For some reason this is what plays hob
-    // with my ability to use ST-link and get a reset
-    // with full convenience.
-    // Note above that this simply calls afio_init()
-    // series_init ();
+    /* Moved here from stm32f1_setup.c so I can comment on it.
+     * And since all board_setup_usb() does is to call
+     * usb_serial_begin(), we just cut out all the middlemen,
+     * more for clarity and one stop shopping to see it here.
+     */
+    // board_setup_usb ();
+    usb_serial_begin ();
 
-    boardInit();
+    /* This simply calls afio_init().
+     * And all that does it to gate on the AFIO clock
+     * and reset AFIO.
+     */
+    series_init ();
+
+    // All that boardInit() does is to disable the debug ports
+    // (i.e. SWD, so let's see if that is the culprit in
+    // my hassle with using SWD and my ST-link.
+    // and it is !!!!  So keep this commented out. !!!!
+    // boardInit();
 
     /*
     -- wirish::priv::board_setup_flash();

@@ -35,10 +35,10 @@
 
 #include <libmaple/libmaple_types.h>
 
+#define SERIAL_USB	0
 #define SERIAL_1	1
 #define SERIAL_2	2
 #define SERIAL_3	3
-#define SERIAL_USB	100
 
 int serial_begin ( int port, int baud );
 void serial_write ( int fd, int ch );

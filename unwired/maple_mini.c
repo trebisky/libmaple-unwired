@@ -44,9 +44,12 @@
 
 /* Since we want the Serial Wire/JTAG pins as GPIOs, disable both SW
  * and JTAG debug support, unless configured otherwise. */
+
+// tjt says NO, we never want this as it screws up ST-link downloads
+// So I entirely override the CONFIG and take matters into my own hands
 void boardInit(void) {
 #ifndef CONFIG_MAPLE_MINI_NO_DISABLE_DEBUG
-    disableDebugPorts();
+    // disableDebugPorts();
 #endif
 }
 
