@@ -28,10 +28,8 @@
 
 int enable = 1;
 
-void usb_serial_write ( char *, int );
-
 int
-usb_check ( void )
+usb_check_noisy ( void )
 {
     int ok = 1;
 
@@ -51,24 +49,33 @@ usb_check ( void )
     return ok;
 }
 
+int
+usb_check ( void )
+{
+    int ok = 1;
+
+    if ( ! usb_is_connected(USBLIB) )
+	ok = 0;
+
+    if ( ! usb_is_configured(USBLIB) )
+	ok = 0;
+
+    return ok;
+}
+
 void
 usb_wait ( void )
 {
-    int tmo = 12;
+    if ( usb_check() )
+	return;
 
-    while ( tmo-- ) {
-	delay ( 1000 );
-	if ( usb_check () )
-	    return;
-    }
-
-    printf ( "USB timed out\n" );
+    printf ( "Waiting for USB\n" );
 
     for ( ;; ) {
-	int c;
-	c = getc ();
 	if ( usb_check () )
 	    return;
+	printf ( "..Wait\n" );
+	delay ( 1000 );
     }
 }
 
@@ -87,19 +94,7 @@ main(void)
     fds = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fds );
 
-    puts ( "-- Starting\n");
     printf ( "serial baud rate = %d\n", 115200 );
-
-    (void) usb_check ();
-    usb_wait ();
-
-    for ( ;; ) {
-	(void) usb_check ();
-	usb_serial_write ( "PIG\n\r", 4);
-	delay ( 2000 );
-	if ( usb_check () )
-	    break;
-    }
 
     // With the original Maple code, my linux system
     // will identify this as /dev/ttyACM0
@@ -109,9 +104,9 @@ main(void)
     //  kernel: cdc_acm 1-1.1.1:1.0: ttyACM0: USB ACM device
 
     fd = serial_begin ( SERIAL_USB, 999 );
+    usb_wait ();
     serial_puts ( fd, "-- USB Starting\n");
 
-    puts ( "-- after USB serial begin\n");
     printf ( "USB fd = %d\n", fd );
 
     for ( ;; ) {
@@ -124,14 +119,10 @@ main(void)
 	for(i = 0; i < 150000; i++)
 	    ;
 #endif
-	delay ( 400 );
-
-	puts ( "-- after delay\n");
+	delay ( 1000 );
 
 	count = millis ();
         serial_printf ( fd, "Systick count = %d\n", count );
-
-	puts ( "-- after systick message\n");
 
 	if ( ! serial_available ( fd ) )
 	    continue;
