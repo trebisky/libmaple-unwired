@@ -146,12 +146,13 @@ bool boardUsesPin(uint8 pin);
 #define BOARD_HAVE_USART2               BOARD_HAVE_USART(2)
 /** Feature test: nonzero iff the board has USART3, 0 otherwise. */
 #define BOARD_HAVE_USART3               BOARD_HAVE_USART(3)
-/** Feature test: nonzero iff the board has UART4, 0 otherwise. */
+
+/* The STM32F1 has only 1,2,3 */
+#ifdef notdef
 #define BOARD_HAVE_UART4                BOARD_HAVE_USART(4)
-/** Feature test: nonzero iff the board has UART5, 0 otherwise. */
 #define BOARD_HAVE_UART5                BOARD_HAVE_USART(5)
-/** Feature test: nonzero iff the board has USART6, 0 otherwise. */
 #define BOARD_HAVE_USART6               BOARD_HAVE_USART(6)
+#endif
 
 /**
  * @brief Does the board break out a SPI peripheral's pins?
@@ -169,11 +170,5 @@ bool boardUsesPin(uint8 pin);
 #define BOARD_HAVE_SPI2 BOARD_HAVE_SPI(2)
 /** Feature test: nonzero iff the board has SPI3. */
 #define BOARD_HAVE_SPI3 BOARD_HAVE_SPI(3)
-
-/**
- * @brief Feature test: nonzero iff the board has SerialUSB.
- */
-#define BOARD_HAVE_SERIALUSB (defined(BOARD_USB_DISC_DEV) && \
-                              defined(BOARD_USB_DISC_BIT))
 
 #endif

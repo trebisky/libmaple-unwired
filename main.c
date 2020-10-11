@@ -1,12 +1,76 @@
 // Tests the SysTick enable/disable functions
 
 #include <unwired.h>
+
 #include <libmaple/systick.h>
+#include <libmaple/usb_cdcacm.h>
+#include <libmaple/usb.h>
 
 // tjt -- we ain't got no button
 // so we code something similar using a keystroke
 
+/* Using this with USB was a real nightmare, and yielded some valuable lessons.
+ * Out of suffering comes enlightenment?
+ *
+ * The trick to making USB work was to do two things:
+ *  a) go into a loop waiting for USB to get connected and configured.
+ *  b) plug and unplug the USB cable
+ *
+ * The actual maple mini had some circuitry to do a USB disconnect.
+ * by yanking on a certain GPIO pin that was wired to the circuit,
+ * you could pull one of the USB lines low (or was it high) and signal
+ * a disconnect.  With a blue pill, we don't have that and have to unplug
+ *  and replug.  At least we do for development and testing.
+ * If this was a finished gadget, we would plug it in and then it would
+ *  set up USB and all would be well.  I think the wait loop would be
+ *  required in any case.
+ */
+
 int enable = 1;
+
+void usb_serial_write ( char *, int );
+
+int
+usb_check ( void )
+{
+    int ok = 1;
+
+    if ( usb_is_connected(USBLIB) )
+        puts ( "USB is connected\n" );
+    else {
+        puts ( "USB is NOT connected\n" );
+	ok = 0;
+    }
+
+    if ( usb_is_configured(USBLIB) )
+        puts ( "USB is configured\n" );
+    else {
+        puts ( "USB is NOT configured\n" );
+	ok = 0;
+    }
+    return ok;
+}
+
+void
+usb_wait ( void )
+{
+    int tmo = 12;
+
+    while ( tmo-- ) {
+	delay ( 1000 );
+	if ( usb_check () )
+	    return;
+    }
+
+    printf ( "USB timed out\n" );
+
+    for ( ;; ) {
+	int c;
+	c = getc ();
+	if ( usb_check () )
+	    return;
+    }
+}
 
 void
 main(void)
@@ -21,7 +85,21 @@ main(void)
 
     // fd = serial_begin ( SERIAL_1, 115200 );
     fds = serial_begin ( SERIAL_1, 115200 );
-    serial_puts ( fds, "-- Starting\n");
+    set_std_serial ( fds );
+
+    puts ( "-- Starting\n");
+    printf ( "serial baud rate = %d\n", 115200 );
+
+    (void) usb_check ();
+    usb_wait ();
+
+    for ( ;; ) {
+	(void) usb_check ();
+	usb_serial_write ( "PIG\n\r", 4);
+	delay ( 2000 );
+	if ( usb_check () )
+	    break;
+    }
 
     // With the original Maple code, my linux system
     // will identify this as /dev/ttyACM0
@@ -33,10 +111,8 @@ main(void)
     fd = serial_begin ( SERIAL_USB, 999 );
     serial_puts ( fd, "-- USB Starting\n");
 
-    serial_puts ( fds, "-- after USB serial begin\n");
-    serial_puts ( fds, "USB fd = " );
-    serial_print_num ( fds, fd );
-    serial_putc ( fds, '\n' );
+    puts ( "-- after USB serial begin\n");
+    printf ( "USB fd = %d\n", fd );
 
     for ( ;; ) {
 
@@ -50,16 +126,12 @@ main(void)
 #endif
 	delay ( 400 );
 
-	serial_puts ( fds, "-- after delay\n");
+	puts ( "-- after delay\n");
 
 	count = millis ();
-        serial_puts ( fd, "Systick count = " );
-	serial_puts ( fds, "-- after 1\n");
-	serial_print_num ( fd, count );
-	serial_puts ( fds, "-- after 2\n");
-	serial_putc ( fd, '\n' );
+        serial_printf ( fd, "Systick count = %d\n", count );
 
-	serial_puts ( fds, "-- after systick message\n");
+	puts ( "-- after systick message\n");
 
 	if ( ! serial_available ( fd ) )
 	    continue;

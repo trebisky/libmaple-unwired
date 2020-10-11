@@ -56,6 +56,8 @@
 #include <libmaple/nvic.h>
 #include <libmaple/systick.h>
 
+#include "serial.h"
+
 void initialize_pin_map ( void );
 void board_setup_gpio(void);
 
@@ -253,6 +255,9 @@ init ( void )
      * more for clarity and one stop shopping to see it here.
      */
     // board_setup_usb ();
+    console_init ();
+    printf ( "In init ....\n" );
+
     usb_serial_begin ();
 
     /* This simply calls afio_init().

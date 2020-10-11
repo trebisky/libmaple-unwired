@@ -74,11 +74,10 @@ __weak void board_setup_gpio(void) {
     gpio_init_all();
 }
 
-#ifdef notyet
+/* Moved to init.c */
+#ifdef not_ever
 __weak void board_setup_usb(void) {
-#if BOARD_HAVE_SERIALUSB
     SerialUSB.begin();
-#endif
 }
 #endif
 

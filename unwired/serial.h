@@ -44,6 +44,8 @@ int serial_begin ( int port, int baud );
 void serial_write ( int fd, int ch );
 void serial_putc ( int fd, int ch );
 void serial_puts ( int fd, char *str );
+void serial_printf ( int fd, char *str, ... );
+
 void serial_print_num ( int fd, int num );
 void serial_print_hex ( int fd, int num );
 void serial_print_num_base ( int fd, int n, uint8 base);
@@ -51,6 +53,14 @@ int serial_available ( int fd );
 void serial_flush ( int fd );
 uint8 serial_read ( int fd );
 uint8 serial_getc ( int fd );
+
+void console_init ( void );
+void set_std_serial ( int arg );
+int getc ( void );
+void putc ( int ch );
+void puts ( char *msg );
+void printf ( char *fmt, ... );
+
 
 /* ------------------------------------------------------------- */
 /* ------------------------------------------------------------- */

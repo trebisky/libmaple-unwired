@@ -32,6 +32,8 @@
 
 // #include <wirish/HardwareSerial.h>
 
+#include <stdarg.h>
+
 #include "boards.h"
 #include "types.h"
 #include "board.h"
@@ -66,6 +68,8 @@ struct serial_info {
 };
 
 static struct serial_info serial_info[NUM_SERIAL];
+
+/* -------------------------------------------------- */
 
 /* F1 MCUs have no GPIO_AFR[HL], so turn off PWM if there's a conflict
  * on this GPIO bit. */
@@ -141,6 +145,7 @@ serial_begin ( int port, int baud )
 	return fd;
 }
 
+/* Just send a single character, no monkey business */
 void
 serial_write ( int fd, int ch )
 {
@@ -150,6 +155,7 @@ serial_write ( int fd, int ch )
 	    usart_putc ( serial_info[fd].dev, ch );
 }
 
+/* This is what we really want to use */
 void
 serial_putc ( int fd, int ch )
 {
@@ -173,9 +179,10 @@ serial_flush ( int fd )
 {
 	if ( serial_info[fd].type == HW_UART )
 	    usart_reset_rx ( serial_info[fd].dev );
+	/* Cannot flush the USB */
 }
 
-
+/* This blocks for a HW serial port */
 uint8
 serial_getc ( int fd )
 {
@@ -212,6 +219,9 @@ serial_puts ( int fd, char *str )
     while (*str)
         serial_putc ( fd, *str++ );
 }
+
+#ifdef notdef
+/* Forget these, use printf now */
 
 /* The usual base 10 case of what follows */
 void
@@ -257,7 +267,7 @@ serial_print_num_base ( int fd, int n, uint8 base)
                      '0' + digit :
                      'A' + digit - 10));
 
-#ifdef notdef
+#ifdef not_this
     while (n > 0) {
         buf[i++] = n % base;
         n /= base;
@@ -270,8 +280,222 @@ serial_print_num_base ( int fd, int n, uint8 base)
     }
 #endif
 }
+#endif
+
+/* -------------------------------------------------- */
+/* -------------------------------------------------- */
+
+/* Here I develop a simple printf.
+ * It only has 3 triggers:
+ *  %s to inject a string
+ *  %d to inject a decimal number
+ *  %h to inject a 32 bit hex value as xxxxyyyy
+ */
+
+#define PRINTF_BUF_SIZE 128
+
+#define PUTCHAR(x)      if ( buf <= end ) *buf++ = (x)
+
+static const char hex_table[] = "0123456789ABCDEF";
+
+// #define HEX(x)  ((x)<10 ? '0'+(x) : 'A'+(x)-10)
+#define HEX(x)  hex_table[(x)]
+
+#ifdef notdef
+static char *
+sprintnb ( char *buf, char *end, int n, int b)
+{
+        char prbuf[16];
+        register char *cp;
+
+        if (b == 10 && n < 0) {
+            PUTCHAR('-');
+            n = -n;
+        }
+        cp = prbuf;
+
+        do {
+            // *cp++ = "0123456789ABCDEF"[n%b];
+            *cp++ = hex_table[n%b];
+            n /= b;
+        } while (n);
+
+        do {
+            PUTCHAR(*--cp);
+        } while (cp > prbuf);
+
+        return buf;
+}
+#endif
+
+static char *
+sprintn ( char *buf, char *end, int n )
+{
+        char prbuf[16];
+        char *cp;
+
+        if ( n < 0 ) {
+            PUTCHAR('-');
+            n = -n;
+        }
+        cp = prbuf;
+
+        do {
+            // *cp++ = "0123456789"[n%10];
+            *cp++ = hex_table[n%10];
+            n /= 10;
+        } while (n);
+
+        do {
+            PUTCHAR(*--cp);
+        } while (cp > prbuf);
+
+        return buf;
+}
+
+static char *
+shex2( char *buf, char *end, int val )
+{
+        PUTCHAR( HEX((val>>4)&0xf) );
+        PUTCHAR( HEX(val&0xf) );
+        return buf;
+}
+
+#ifdef notdef
+static char *
+shex3( char *buf, char *end, int val )
+{
+        PUTCHAR( HEX((val>>8)&0xf) );
+        return shex2(buf,end,val);
+}
+
+static char *
+shex4( char *buf, char *end, int val )
+{
+        buf = shex2(buf,end,val>>8);
+        return shex2(buf,end,val);
+}
+#endif
+
+static char *
+shex8( char *buf, char *end, int val )
+{
+        buf = shex2(buf,end,val>>24);
+        buf = shex2(buf,end,val>>16);
+        buf = shex2(buf,end,val>>8);
+        return shex2(buf,end,val);
+}
+
+static void
+asnprintf (char *abuf, unsigned int size, const char *fmt, va_list args)
+{
+    char *buf, *end;
+    int c;
+    char *p;
+
+    buf = abuf;
+    end = buf + size - 1;
+    if (end < buf - 1) {
+        end = ((void *) -1);
+        size = end - buf + 1;
+    }
+
+    while ( c = *fmt++ ) {
+	if ( c != '%' ) {
+            PUTCHAR(c);
+            continue;
+        }
+	c = *fmt++;
+	if ( c == 'd' ) {
+	    buf = sprintn ( buf, end, va_arg(args,int) );
+	    continue;
+	}
+	if ( c == 'h' ) {
+	    buf = shex8 ( buf, end, va_arg(args,int) );
+	    continue;
+	}
+	if ( c == 's' ) {
+	    p = va_arg(args,char *);
+	    // printf ( "Got: %s\n", p );
+	    while ( c = *p++ )
+		PUTCHAR(c);
+	    continue;
+	}
+    }
+    if ( buf > end )
+	buf = end;
+    PUTCHAR('\0');
+}
 
 
+void
+serial_printf ( int fd, char *fmt, ... )
+{
+	char buf[PRINTF_BUF_SIZE];
+        va_list args;
+        int rv;
+
+        va_start ( args, fmt );
+        asnprintf ( buf, PRINTF_BUF_SIZE, fmt, args );
+        va_end ( args );
+
+        serial_puts ( fd, buf );
+}
+
+/* -------------------------------------------------- */
+
+/* The idea here is to be able to call puts and printf
+ * from anywhere without passing fd all over the world.
+ */
+
+static int std_serial = SERIAL_1;
+
+void
+console_init ( void )
+{
+	int console;
+
+	console = serial_begin ( SERIAL_1, 115200 );
+	set_std_serial ( console );
+}
+
+void
+set_std_serial ( int arg )
+{
+	std_serial = arg;
+}
+
+int
+getc ( void )
+{
+	return serial_getc ( std_serial );
+}
+
+void
+putc ( int ch )
+{
+	serial_putc ( std_serial, ch );
+}
+
+void
+puts ( char *msg )
+{
+	serial_puts ( std_serial, msg );
+}
+
+void
+printf ( char *fmt, ... )
+{
+	char buf[PRINTF_BUF_SIZE];
+        va_list args;
+        int rv;
+
+        va_start ( args, fmt );
+        asnprintf ( buf, PRINTF_BUF_SIZE, fmt, args );
+        va_end ( args );
+
+        serial_puts ( std_serial, buf );
+}
 
 /* -------------------------------------------------- */
 /* -------------------------------------------------- */

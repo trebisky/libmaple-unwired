@@ -41,13 +41,41 @@
 // #include <wirish/wirish.h>
 #include "unwired.h"
 
-/* These routines are never intended to be called directly,
+static void rxHook(unsigned, void*);
+static void ifaceSetupHook(unsigned, void*);
+
+/* The routines in this file are never intended to be called directly,
  * so I don't provide public prototypes.
  * The intent is that they will be called from routines in serial.c
  * tjt
  */
 
-#define USB_TIMEOUT 50
+#ifdef notdef
+/* The maple mini had this pin wired to a USB disconnect circuit,
+ * but the blue pill does no such thing.
+ */
+#define BOARD_USB_DISC_DEV        GPIOB
+#define BOARD_USB_DISC_BIT        9
+
+static void
+usb_disc_enable(gpio_dev *disc_dev, uint8 disc_bit)
+{
+    /* Present ourselves to the host. Writing 0 to "disc" pin must
+     * pull USB_DP pin up while leaving USB_DM pulled down by the
+     * transceiver. See USB 2.0 spec, section 7.1.7.3. */
+    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(disc_dev, disc_bit, 0);
+}
+
+static void
+usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
+{
+    /* Turn off the interrupt and signal disconnect (see e.g. USB 2.0
+     * spec, section 7.1.7.3). */
+    nvic_irq_disable(NVIC_USB_LP_CAN_RX0);
+    gpio_write_bit(disc_dev, disc_bit, 1);
+}
+#endif
 
 /* tjt - as near as I can tell, this whole hook business
  * was all about boot loaders that I neither have, know
@@ -59,12 +87,18 @@
 void
 usb_serial_begin (void)
 {
-    usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
-    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
-    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+    printf ( "USB usb_serial_begin\n" );
+    // usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
+    usb_cdcacm_enable ();
+
+    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
+    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
 }
 
-static void
+#define USB_TIMEOUT 50
+
+// static void
+void
 usb_serial_write ( const char *buf, int len )
 {
     uint32 txed = 0;
@@ -140,12 +174,153 @@ usb_serial_getc ( void )
     return b;
 }
 
+/* ------------------------------------------------ */
+/* ------------------------------------------------ */
+/*
+ * Bootloader hook stuff
+ */
+
+enum reset_state_t {
+    DTR_UNSET,
+    DTR_HIGH,
+    DTR_NEGEDGE,
+    DTR_LOW
+};
+
+static enum reset_state_t reset_state = DTR_UNSET;
+
+static void ifaceSetupHook ( unsigned hook, void *requestvp )
+{
+    uint8 request = *(uint8*)requestvp;
+
+    printf ( "USB ifaceSetupHook\n" );
+    // Ignore requests we're not interested in.
+    if (request != USB_CDCACM_SET_CONTROL_LINE_STATE) {
+        return;
+    }
+
+#if defined(BOOTLOADER_maple)
+    // We need to see a negative edge on DTR before we start looking
+    // for the in-band magic reset byte sequence.
+    uint8 dtr = usb_cdcacm_get_dtr();
+    switch (reset_state) {
+    case DTR_UNSET:
+        reset_state = dtr ? DTR_HIGH : DTR_LOW;
+        break;
+    case DTR_HIGH:
+        reset_state = dtr ? DTR_HIGH : DTR_NEGEDGE;
+        break;
+    case DTR_NEGEDGE:
+        reset_state = dtr ? DTR_HIGH : DTR_LOW;
+        break;
+    case DTR_LOW:
+        reset_state = dtr ? DTR_HIGH : DTR_LOW;
+        break;
+    }
+#endif
+
+#if defined(BOOTLOADER_robotis)
+    uint8 dtr = usb_cdcacm_get_dtr();
+    uint8 rts = usb_cdcacm_get_rts();
+
+    if (rts && !dtr) {
+        reset_state = DTR_NEGEDGE;
+    }
+#endif
+}
+
+#define RESET_DELAY 100000
+
+#if defined(BOOTLOADER_maple)
+static void
+wait_reset ( void )
+{
+  delay_us(RESET_DELAY);
+  nvic_sys_reset();
+}
+#endif
+
+#define STACK_TOP 0x20000800
+#define EXC_RETURN 0xFFFFFFF9
+#define DEFAULT_CPSR 0x61000000
+
+static void
+rxHook( unsigned hook, void *ignored )
+{
+    printf ( "USB rxHook\n" );
+    /* FIXME this is mad buggy; we need a new reset sequence. E.g. NAK
+     * after each RX means you can't reset if any bytes are waiting. */
+    if (reset_state == DTR_NEGEDGE) {
+        reset_state = DTR_LOW;
+
+        if (usb_cdcacm_data_available() >= 4) {
+
+#if defined(BOOTLOADER_maple)
+            // The magic reset sequence is "1EAF".
+            static const uint8 magic[4] = {'1', 'E', 'A', 'F'};
+#endif
+
+#if defined(BOOTLOADER_robotis)
+            static const uint8 magic[4] = {'C', 'M', '9', 'X'};
+#endif
+            uint8 chkBuf[4];
+
+            // Peek at the waiting bytes, looking for reset sequence,
+            // bailing on mismatch.
+            usb_cdcacm_peek(chkBuf, 4);
+            for (unsigned i = 0; i < sizeof(magic); i++) {
+                if (chkBuf[i] != magic[i]) {
+                    return;
+                }
+            }
+
+#if defined(BOOTLOADER_maple)
+            // Got the magic sequence -> reset, presumably into the bootloader.
+            // Return address is wait_reset, but we must set the thumb bit.
+            uintptr_t target = (uintptr_t)wait_reset | 0x1;
+            asm volatile("mov r0, %[stack_top]      \n\t" // Reset stack
+                         "mov sp, r0                \n\t"
+                         "mov r0, #1                \n\t"
+                         "mov r1, %[target_addr]    \n\t"
+                         "mov r2, %[cpsr]           \n\t"
+                         "push {r2}                 \n\t" // Fake xPSR
+                         "push {r1}                 \n\t" // PC target addr
+                         "push {r0}                 \n\t" // Fake LR
+                         "push {r0}                 \n\t" // Fake R12
+                         "push {r0}                 \n\t" // Fake R3
+                         "push {r0}                 \n\t" // Fake R2
+                         "push {r0}                 \n\t" // Fake R1
+                         "push {r0}                 \n\t" // Fake R0
+                         "mov lr, %[exc_return]     \n\t"
+                         "bx lr"
+                         :
+                         : [stack_top] "r" (STACK_TOP),
+                           [target_addr] "r" (target),
+                           [exc_return] "r" (EXC_RETURN),
+                           [cpsr] "r" (DEFAULT_CPSR)
+                         : "r0", "r1", "r2");
+#endif
+
+#if defined(BOOTLOADER_robotis)
+            iwdg_init(IWDG_PRE_4, 10);
+#endif
+
+            /* Can't happen. */
+            ASSERT_FAULT(0);
+        }
+    }
+}
+
 /* ==================================================== */
 /* ==================================================== */
 /* ==================================================== */
 /* ==================================================== */
 
 #ifdef OLD_CPP_SERIALUSB
+
+#define BOARD_HAVE_SERIALUSB (defined(BOARD_USB_DISC_DEV) && \
+                              defined(BOARD_USB_DISC_BIT))
+
 /* --- start old usb_serial.h --- */
 
 #include <wirish/Print.h>
@@ -195,8 +370,6 @@ static void ifaceSetupHook(unsigned, void*);
  * USBSerial interface
  */
 
-#define USB_TIMEOUT 50
-
 USBSerial::USBSerial(void) {
 #if !BOARD_HAVE_SERIALUSB
     ASSERT(0);
@@ -225,6 +398,8 @@ void USBSerial::write(uint8 ch) {
 void USBSerial::write(const char *str) {
     this->write(str, strlen(str));
 }
+
+#define USB_TIMEOUT 50
 
 void USBSerial::write(const void *buf, uint32 len) {
     if (!this->isConnected() || !buf) {
