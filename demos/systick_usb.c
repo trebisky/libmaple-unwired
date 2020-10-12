@@ -10,7 +10,7 @@
 // so we code something similar using a keystroke
 
 /* Using this with USB was a real nightmare, and yielded some valuable lessons.
- * Out of suffering comes enlightenment?
+ * Out of suffering comes enlightenment?!!
  *
  * The trick to making USB work was to do two things:
  *  a) go into a loop waiting for USB to get connected and configured.

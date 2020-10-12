@@ -35,6 +35,8 @@
 #include <libmaple/gpio.h>
 #include <libmaple/nvic.h>
 
+void printf ( char *fmt, ... );
+
 /* (Undocumented) hooks used by Wirish to direct our behavior here */
 extern __weak void __lm_error(void);
 extern __weak usart_dev* __lm_enable_error_usart(void);
@@ -56,6 +58,17 @@ __attribute__((noreturn)) void __error(void) {
     throb();
 }
 
+/* tjt - The ASSERT macro will call this if the argument is non-zero
+ * The code below depends on my new "std" scheme supporting printf.
+ */
+void _fail(const char* file, int line, const char* exp) {
+        /* Print failed assert message */
+        printf("ERROR: FAILED ASSERT(%s): %s: %d\n", exp, file, line);
+	printf ( "spinning\n" );
+	for ( ;; ) ;
+}
+
+#ifdef notdef
 /*
  * Print an error message on a UART upon a failed assertion (if one is
  * available), and punt to __error().
@@ -92,6 +105,7 @@ void __assert_func(const char* file, int line, const char* method,
                    const char* expression) {
     _fail(file, line, expression);
 }
+#endif
 
 /*
  * Provide an abort() implementation that aborts execution and punts

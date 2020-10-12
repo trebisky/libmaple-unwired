@@ -44,6 +44,8 @@
 
 #include <string.h>
 
+void printf ( char *fmt, ... );
+
 static inline int32 wait_for_state_change(i2c_dev *dev,
                                           i2c_state state,
                                           uint32 timeout);
@@ -226,6 +228,16 @@ int32 i2c_master_xfer (i2c_dev *dev,
                       uint32 timeout) {
     int32 rc;
 
+    printf ( "Enter i2c master xfer\n" );
+    printf ( " i2c state: %d\n", dev->state );
+
+    /* Added by tjt, usually this means the caller just neglected
+     * to call i2c_master_enable ( I2C2, 0) or some such
+     * to properly get things started.
+     */
+    if ( dev->state == I2C_STATE_DISABLED )
+	return I2C_ERROR_PROTOCOL;
+
     ASSERT(dev->state == I2C_STATE_IDLE);
 
     dev->msg = msgs;
@@ -253,21 +265,23 @@ out:
  * @param timeout Timeout, in milliseconds
  * @return 0 if target state is reached, a negative value on error.
  */
-static inline int32 wait_for_state_change(i2c_dev *dev,
-                                          i2c_state state,
-                                          uint32 timeout) {
+static inline int32
+wait_for_state_change(i2c_dev *dev, i2c_state state, uint32 timeout)
+{
     i2c_state tmp;
 
-    while (1) {
+    /* Polling loop waiting for the state we desire.
+     */
+    for ( ;; ) {
         tmp = dev->state;
 
-        if (tmp == I2C_STATE_ERROR) {
+        if (tmp == I2C_STATE_ERROR)
             return I2C_STATE_ERROR;
-        }
 
-        if (tmp == state) {
+        if (tmp == state)
             return 0;
-        }
+
+	printf ( "i2c wait: tmo = %d, upt = %d\n", timeout, systick_uptime() );
 
         if (timeout) {
             if (systick_uptime() > (dev->timestamp + timeout)) {
