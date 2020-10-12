@@ -521,3 +521,5 @@ static void set_ccr_trise(i2c_dev *dev, uint32 flags) {
     i2c_set_clk_control(dev, ccr);
     i2c_set_trise(dev, trise);
 }
+
+/* THE END */

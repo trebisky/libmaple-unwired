@@ -73,15 +73,19 @@ main(void)
 
     i2c_master_enable ( I2C2, 0);
 
-    printf ( "Ready to go\n" );
+    printf ( "-- BOOTED -- off we go\n" );
 
     hdc_test ();
 }
 
-// static char write_buffer[8];
-static i2c_msg write_msg;
-
 #define I2C_TIMEOUT	3000
+
+#ifdef notdef
+/* These are in i2c.h */
+#define I2C_MSG_READ            0x1
+#define I2C_MSG_10BIT_ADDR      0x2
+#endif
+
 
 /* Also bogus for now.
  * once things are working, absorb this into lcd_write()
@@ -90,21 +94,19 @@ static i2c_msg write_msg;
 void
 i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
 {
+    i2c_msg write_msg;
     int stat;
 
-    printf ( "Start i2c_send\n" );
+    // printf ( "Start i2c_send\n" );
 
     write_msg.addr = addr;
     write_msg.flags = 0; // write, 7 bit address
+    write_msg.data = buf;
     write_msg.length = count;
     write_msg.xferred = 0;
 
-    // write_msg.data = write_buffer;
-    // write_buffer[0] = buf[0];
-    write_msg.data = buf;
-
     stat = i2c_master_xfer ( I2C2, &write_msg, 1, I2C_TIMEOUT);
-    printf ( "Finished i2c_send: returned: %d\n", stat );
+    // printf ( "Finished i2c_send: returned: %d\n", stat );
     if ( stat ) {
 	printf ( "Trouble with i2c, spinning\n" );
 	for ( ;; ) ;
@@ -114,7 +116,23 @@ i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
 void
 i2c_recv ( struct i2c *ip, int addr, unsigned char *buf, int count )
 {
-    printf ( "Start i2c_recv\n" );
+    i2c_msg read_msg;
+    int stat;
+
+    // printf ( "Start i2c_recv\n" );
+
+    read_msg.addr = addr;
+    read_msg.flags = I2C_MSG_READ;
+    read_msg.data = buf;
+    read_msg.length = count;
+    read_msg.xferred = 0;
+
+    stat = i2c_master_xfer ( I2C2, &read_msg, 1, I2C_TIMEOUT);
+    // printf ( "Finished i2c_recv: returned: %d\n", stat );
+    if ( stat ) {
+	printf ( "Trouble with i2c, spinning\n" );
+	for ( ;; ) ;
+    }
 }
 
 /* Code below here is almost unchanged from Kyu
