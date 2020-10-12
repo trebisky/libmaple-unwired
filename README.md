@@ -45,3 +45,4 @@ What this does is to switch the pins dedicated to SWD from being SWD (aka
 using SWD and want a couple of extra GPIO pins.
 These are A13 and A14.  On the original maple_mini these were just pins on
 the edge of the board, not in a handy SWD connector like on the blue pill.
+By default now, I do not make this call and these pins are always SWD.
