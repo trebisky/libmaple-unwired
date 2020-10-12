@@ -228,8 +228,8 @@ int32 i2c_master_xfer (i2c_dev *dev,
                       uint32 timeout) {
     int32 rc;
 
-    printf ( "Enter i2c master xfer\n" );
-    printf ( " i2c state: %d\n", dev->state );
+    // printf ( "Enter i2c master xfer\n" );
+    // printf ( " i2c state: %d\n", dev->state );
 
     /* Added by tjt, usually this means the caller just neglected
      * to call i2c_master_enable ( I2C2, 0) or some such
@@ -281,10 +281,10 @@ wait_for_state_change(i2c_dev *dev, i2c_state state, uint32 timeout)
         if (tmp == state)
             return 0;
 
-	printf ( "i2c wait: tmo = %d, upt = %d\n", timeout, systick_uptime() );
+	// printf ( "i2c wait: tmo = %d, upt = %d\n", timeout, systick_uptime()-dev->timestamp );
 
         if (timeout) {
-            if (systick_uptime() > (dev->timestamp + timeout)) {
+            if (systick_uptime()-dev->timestamp > timeout ) {
                 /* TODO: overflow? */
                 /* TODO: racy? */
                 return I2C_ERROR_TIMEOUT;

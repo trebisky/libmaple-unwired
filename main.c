@@ -14,6 +14,10 @@
  * These gadgets are cheap, simple, and well known.
  *
  * It seems that you MUST run this from 5 volts and use a level shifter.
+ * This isn't quite true.  The display itself will work from 3.3 volts,
+ *  but is very faint (and you probably will have to adjust the trimpot
+ *  to even see it).  The logic works fine at 3.3 volts,
+ *  but to see the display, it really wants 5 volts.
  */
 
 #include <unwired.h>
@@ -27,6 +31,7 @@ struct i2c {
 
 void lcd_init ( struct i2c *ip );
 void lcd_msg ( struct i2c *ip, char *msg );
+void lcd_msg2 ( struct i2c *ip, char *msg );
 
 void
 lcd_test ( void )
@@ -40,11 +45,9 @@ lcd_test ( void )
 
 	lcd_init ( ip );
 
-	printf ( "Init OK\n" );
-
 	lcd_msg ( ip, "Eat more fish" );
+	lcd_msg2 ( ip, "GPS 5244" );
 
-	// lcd_msg2 ( ip, "GPS 5244" );
 	// lcd_loop ( ip );
 
 	// lcd_xxx ( ip );
@@ -59,13 +62,10 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-    printf ( "Ready to go\n" );
+    printf ( "-- Booted: ready to go\n" );
 
     lcd_test ();
 }
-
-static char write_buffer[2];
-static i2c_msg write_msg;
 
 /* Also bogus for now.
  * once things are working, absorb this into lcd_write()
@@ -74,18 +74,21 @@ static i2c_msg write_msg;
 void
 i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
 {
-    printf ( "Start i2c_send\n" );
+    i2c_msg write_msg;
+
+    // printf ( "Start i2c_send\n" );
 
     write_msg.addr = addr;
     write_msg.flags = 0; // write, 7 bit address
     write_msg.length = count;
     write_msg.xferred = 0;
-    write_msg.data = write_buffer;
+    // write_msg.data = write_buffer;
+    write_msg.data = buf;
 
-    write_buffer[0] = buf[0];
+    // write_buffer[0] = buf[0];
 
     i2c_master_xfer ( I2C2, &write_msg, 1, 2000);
-    printf ( "Finished i2c_send\n" );
+    // printf ( "Finished i2c_send\n" );
 }
 
 /* It is pretty much unchanged Kyu code below here */
@@ -169,6 +172,13 @@ lcd_write ( struct i2c *ip, int data )
 
 	buf[0] = data;
 	i2c_send ( ip, LCD_ADDR, buf, 1 );
+
+	/* tjt - needed on stm32 for some reason */
+	// delay_us ( 200 ); -- OK
+	delay_us ( 50 );
+	// delay_us ( 40 ); -- not enough
+	// delay_us ( 20 ); -- not enough
+	// delay_us ( 10 ); - not enough
 }
 
 /* Send data, strobe the ENA line.
@@ -181,9 +191,11 @@ lcd_send ( struct i2c *ip, int data )
 	lcd_write ( ip, data );
 
 	lcd_write ( ip, data | LCD_ENA );
+
 	// delay_us ( 50 );
 
 	lcd_write ( ip, data );
+
 	delay_us ( DELAY_NORM );
 }
 
@@ -240,38 +252,6 @@ lcd_msg2 ( struct i2c *ip, char *msg )
 	lcd_string ( ip, msg );
 }
 
-#ifdef notdef
-void
-lcd_xxx ( struct i2c *ip )
-{
-	int i;
-
-	lcd_cmd ( ip, LCD_LINE_1 );
-
-	for ( i=0; i<LCD_WIDTH; i++ ) {
-	    lcd_data ( ip, 'X' );
-	}
-}
-
-/* Get it into 4 bit mode */
-void
-lcd_init_4X ( struct i2c *ip )
-{
-   delay_us (15000);             // wait 15msec
-   lcd_write (ip,0b00110100); // D7=0, D6=0, D5=1, D4=1, RS,RW=0 EN=1
-   lcd_write (ip,0b00110000); // D7=0, D6=0, D5=1, D4=1, RS,RW=0 EN=0
-   delay_us (4100);              // wait 4.1msec
-   lcd_write (ip,0b00110100); // 
-   lcd_write (ip,0b00110000); // same
-   delay_us (100);               // wait 100usec
-   lcd_write (ip,0b00110100); //
-   lcd_write (ip,0b00110000); // 8-bit mode init complete
-   delay_us (4100);              // wait 4.1msec
-   lcd_write (ip,0b00100100); //
-   lcd_write (ip,0b00100000); // switched now to 4-bit mode
-}
-#endif
-
 /* Get it into 4 bit mode */
 void
 lcd_init_4 ( struct i2c *ip )
@@ -286,7 +266,7 @@ lcd_init ( struct i2c *ip )
 {
 	lcd_init_4 ( ip );
 
-	printf ( "init_4 OK\n" );
+	// printf ( "init_4 OK\n" );
 
 	lcd_cmd ( ip, INIT_CURSOR );
 	lcd_cmd ( ip, INIT_DISPLAY );
@@ -331,9 +311,5 @@ lcd_loop ( struct i2c *ip )
 	    }
 	}
 }
-
-/* ---------------------------------------------- */
-/* ---------------------------------------------- */
-
 
 /* THE END */
