@@ -26,8 +26,7 @@
  *  required in any case.
  */
 
-int enable = 1;
-
+#ifdef notdef
 int
 usb_check_noisy ( void )
 {
@@ -48,36 +47,51 @@ usb_check_noisy ( void )
     }
     return ok;
 }
+#endif
 
+/* This hides the true state variable.
+ * Once value can be UNCONNECTED
+ * So CONNECTED means any other value,
+ * including CONFIGURED.
+ */
 int
 usb_check ( void )
 {
-    int ok = 1;
+    if ( usb_is_configured(USBLIB) )
+	return 'C';
 
-    if ( ! usb_is_connected(USBLIB) )
-	ok = 0;
+    if ( usb_is_connected(USBLIB) )
+	return 'K';
 
-    if ( ! usb_is_configured(USBLIB) )
-	ok = 0;
-
-    return ok;
+    return 'U';
 }
 
 void
 usb_wait ( void )
 {
-    if ( usb_check() )
+    int stat;
+
+    if ( usb_check() == 'C' )
 	return;
 
     printf ( "Waiting for USB\n" );
 
     for ( ;; ) {
-	if ( usb_check () )
+	stat = usb_check ();
+	if ( stat == 'U' )
+	    printf ( "USB unconnected\n" );
+	if ( stat == 'K' )
+	    printf ( "USB connected\n" );
+	if ( stat == 'C' ) {
+	    printf ( "USB configured !!!\n" );
 	    return;
+	}
 	printf ( "..Wait\n" );
 	delay ( 1000 );
     }
 }
+
+int enable = 1;
 
 void
 main(void)
@@ -105,7 +119,7 @@ main(void)
 
     fd = serial_begin ( SERIAL_USB, 999 );
     usb_wait ();
-    serial_puts ( fd, "-- USB Starting\n");
+    printf ( "-- USB Happy and Starting\n");
 
     printf ( "USB fd = %d\n", fd );
 

@@ -46,6 +46,8 @@
 #include <libmaple/usart.h>
 
 void usb_serial_begin ( void );
+void usb_serial_wait ( void );
+void usb_serial_wait_t ( int );
 char usb_serial_getc ( void );
 void usb_serial_putc ( char );
 int usb_serial_available ( void );
@@ -117,8 +119,7 @@ serial_begin ( int port, int baud )
 	/* ignores baud rate */
 	if ( port == SERIAL_USB ) {
 	    si->type = USB_UART;
-	    // We do this on boot up.
-	    // usb_serial_begin ();
+	    usb_serial_wait ();
 	    return fd;
 	}
 
@@ -412,6 +413,10 @@ asnprintf (char *abuf, unsigned int size, const char *fmt, va_list args)
 	}
 	if ( c == 'h' ) {
 	    buf = shex8 ( buf, end, va_arg(args,int) );
+	    continue;
+	}
+	if ( c == 'c' ) {
+            PUTCHAR( va_arg(args,int) );
 	    continue;
 	}
 	if ( c == 's' ) {

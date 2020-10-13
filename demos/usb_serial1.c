@@ -1,15 +1,14 @@
 // Tests USB serial
-// usb_serial.c
-
-// Tom Trebisky  10-13-2020
-//
-// This is finally a clean example of how to use serial USB.
 
 #include <unwired.h>
 
+#include <libmaple/systick.h>
+#include <libmaple/usb_cdcacm.h>
 #include <libmaple/usb.h>
 
-/* 
+/* Using this with USB was a real nightmare, and yielded some valuable lessons.
+ * Out of suffering comes enlightenment?!!
+ *
  * The trick to making USB work was to do two things:
  *  a) go into a loop waiting for USB to get connected and configured.
  *  b) plug and unplug the USB cable
@@ -31,39 +30,66 @@
  *  kernel: cdc_acm 1-1.1.1:1.0: ttyACM0: USB ACM device
  */
 
-/* With this demo, the idea is that I have moved the usb_wait
- * into the unwired/serial.c library.
+/* This hides the true state variable.
+ * Once value can be UNCONNECTED
+ * So CONNECTED means any other value,
+ * including CONFIGURED.
  */
+int
+usb_check ( void )
+{
+    if ( usb_is_configured(USBLIB) )
+	return 'C';
 
-/* Here is what we see (at least on Fedora 30 linux)
- *
- * First, get rid of ModemManager ifit is running on your system.
- *
- * 1 - We load code into the board and we see "unconnected" status forever.
+    if ( usb_is_connected(USBLIB) )
+	return 'K';
+
+    return 'U';
+}
+
+void
+usb_wait ( void )
+{
+    int stat;
+
+    if ( usb_check() == 'C' )
+	return;
+
+    printf ( "Waiting for USB\n" );
+
+    for ( ;; ) {
+	stat = usb_check ();
+	if ( stat == 'U' )
+	    printf ( "USB unconnected\n" );
+	if ( stat == 'K' )
+	    printf ( "USB connected\n" );
+	if ( stat == 'C' ) {
+	    printf ( "USB configured !!!\n" );
+	    return;
+	}
+	printf ( "..Wait\n" );
+	delay ( 1000 );
+    }
+}
+
+/* Here is what we see.
+ * 1 - We load code into the board and we see "unconnected" forever.
  * 2 - We unplug the USB cable.  Linux sees a disconnect.
  *				this code still sees "unconnected"
  * 3 - We replug the cable.  Linux sees /dev/ttyACM0
- *				this code goes to "configured" !!
- * Now this code is running, but probably nothing is listening yet on
- * the linux side.  Any output will be lost, but we will not hang
- * writing into thin air.  For some applications this will be fine,
- * for example if we just spit out a telemetry stream that a linux side
- * application can start listening to at any point.
- *
- * What this code does though is to wait for a character to by typed
- * on USB, then begins spewing messages for ever and ever.
- * The character wait ensures that we see message 1.
- *
- * I use "picocom /dev/ttyACM0" on the linux side to talk to this.
+ *				this code goes to "configured"
+ * So this code runs, but nothing is listening yet on the
+ *  linux side.  In fact when I try to run picocom, it rejects
+ *  it the first few times.  When it finally does allow me to
+ *  connect, I have missed quite a bit of output.
  */
 
 void
 main(void)
 {
-    int fd_usb;
+    int fd;
     int fds;
     int count;
-    int c;
 
     pinMode(BOARD_LED_PIN, OUTPUT);
 
@@ -72,15 +98,9 @@ main(void)
 
     printf ( "serial baud rate = %d\n", 115200 );
 
-
-    printf ( "Waiting for USB to begin\n" );
-    fd_usb = serial_begin ( SERIAL_USB, 999 );
+    fd = serial_begin ( SERIAL_USB, 999 );
+    usb_wait ();
     printf ( "-- USB Happy and Starting\n");
-
-    printf ( "Waiting for input from USB\n" );
-
-    c = serial_getc ( fd_usb );
-    printf ( "Got input from USB: %h %c\n", c, c );
 
     for ( count = 1; ; count++ ) {
 
@@ -88,7 +108,7 @@ main(void)
 
 	delay ( 1000 );
 
-        serial_printf ( fd_usb, "Count = %d\n", count );
+        serial_printf ( fd, "Count = %d\n", count );
     }
 }
 

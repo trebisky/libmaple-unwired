@@ -20,3 +20,5 @@ libraries_ORIG/
 support/make/OLD/
 GIT_crap
 examples
+bbb.c
+hdc.c

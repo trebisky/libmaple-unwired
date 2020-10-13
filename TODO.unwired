@@ -1,0 +1,13 @@
+-- Add bmp180 i2c demo
+-- De-Kyu the LCD i2c demo
+-- GPS project
+
+-- unwire all of wirish
+-- convert all examples, run and test them.
+
+-- find out why my bare metal i2c does not work
+-- hookup calls for timer, uart, even USB
+
+-- fully understand USB
+-- nice recoding of the ST USB library
+

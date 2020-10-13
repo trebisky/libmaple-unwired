@@ -48,6 +48,8 @@
 #include "usb_core.h"
 #include "usb_def.h"
 
+void printf ( char *, ... );
+
 /******************************************************************************
  ******************************************************************************
  ***
@@ -374,11 +376,62 @@ void usb_cdcacm_set_hooks(unsigned hook_flags, void (*hook)(unsigned, void*)) {
  * Also the xxxx_disable() routine never gets called,
  * so the heck with it.
  */
-void usb_cdcacm_enable ( void )
+void
+usb_cdcacm_enable ( void )
 {
     /* Initialize the USB peripheral. */
     usb_init_usblib(USBLIB, ep_int_in, ep_int_out);
 }
+
+int
+usb_cdcacm_check ( void )
+{
+    return USBLIB->state == USB_CONFIGURED;
+}
+
+#ifdef notdef
+void
+usb_cdcacm_wait ( void )
+{
+    for ( ;; ) {
+	if ( usb_cdcacm_check () )
+	    return;
+    }
+}
+
+/* This started working when we added the printf !!
+ * I think "state" needs to be declared volatile.
+ * And indeed that is essential.
+ */
+void
+usb_cdcacm_wait ( void )
+{
+    for ( ;; ) {
+	printf ( "cdcadm_wait = %d\n", USBLIB->state );
+	if ( USBLIB->state == USB_CONFIGURED )
+	    return;
+    }
+}
+#endif
+
+void
+usb_cdcacm_wait ( void )
+{
+    for ( ;; )
+	if ( USBLIB->state == USB_CONFIGURED )
+	    return;
+}
+
+#ifdef notdef
+/* for reference, from include/usb.h */
+static inline uint8 usb_is_connected(usblib_dev *dev) {
+    return dev->state != USB_UNCONNECTED;
+}
+
+static inline uint8 usb_is_configured(usblib_dev *dev) {
+    return dev->state == USB_CONFIGURED;
+}
+#endif
 
 #ifdef notdef
 void usb_cdcacm_enable(gpio_dev *disc_dev, uint8 disc_bit) {

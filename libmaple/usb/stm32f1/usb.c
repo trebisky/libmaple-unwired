@@ -79,6 +79,7 @@ static usblib_dev usblib = {
     .prevState = USB_UNCONNECTED,
     .clk_id = RCC_USB,
 };
+
 usblib_dev *USBLIB = &usblib;
 
 /*

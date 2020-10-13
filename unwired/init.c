@@ -249,16 +249,17 @@ init ( void )
     board_setup_adcs ();
     board_setup_timers ();
 
+    console_init ();
     /* Moved here from stm32f1_setup.c so I can comment on it.
      * And since all board_setup_usb() does is to call
      * usb_serial_begin(), we just cut out all the middlemen,
      * more for clarity and one stop shopping to see it here.
      */
     // board_setup_usb ();
-    console_init ();
-    printf ( "In init ....\n" );
 
+    printf ( "In init ....\n" );
     usb_serial_begin ();
+    printf ( "USB serial begin has returned\n" );
 
     /* This simply calls afio_init().
      * And all that does it to gate on the AFIO clock
@@ -271,7 +272,15 @@ init ( void )
     // my hassle with using SWD and my ST-link.
     // and it is !!!!  So keep this commented out. !!!!
     // boardInit();
+}
 
+#ifdef OLD_BOARDS_CPP
+
+// #include "boards_private.h"
+// I am just copying the "private" file in here verbatim, as it is all C++ mumbo jumbo.
+
+void old_init_rubbish ()
+{
     /*
     -- wirish::priv::board_setup_flash();
     -- wirish::priv::board_setup_clocks();
@@ -285,11 +294,6 @@ init ( void )
     -- boardInit();
     */
 }
-
-#ifdef OLD_BOARDS_CPP
-
-// #include "boards_private.h"
-// I am just copying the above file in here verbatim, as it is all C++ mumbo jumbo.
 
 /**
  * @file wirish/boards_private.h

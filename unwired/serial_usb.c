@@ -87,12 +87,35 @@ usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
 void
 usb_serial_begin (void)
 {
-    printf ( "USB usb_serial_begin\n" );
+    // printf ( "USB usb_serial_begin\n" );
     // usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
     usb_cdcacm_enable ();
 
-    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
-    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
+    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+}
+
+void
+usb_serial_wait ( void )
+{
+    usb_cdcacm_wait ();
+}
+
+/* With timeout for config */
+/* Caller should also call usb_check() on return
+ *  to verify whether the connection configured or not
+ */
+void
+usb_serial_wait_t (int timeout)
+{
+    unsigned int start = systick_uptime ();
+
+    for ( ;; ) {
+	if ( usb_check () )
+	    return;
+	if ( systick_uptime() - start > timeout )
+	    return;
+    }
 }
 
 #define USB_TIMEOUT 50

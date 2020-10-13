@@ -120,7 +120,9 @@ extern "C" {
 /* tjt */
 // void usb_cdcacm_enable(gpio_dev*, uint8);
 // void usb_cdcacm_disable(gpio_dev*, uint8);
-void usb_cdcacm_enable(void);
+void usb_cdcacm_enable ( void );
+void usb_cdcacm_wait ( void );
+int usb_check ( void );
 
 void   usb_cdcacm_putc(char ch);
 uint32 usb_cdcacm_tx(const uint8* buf, uint32 len);
