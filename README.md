@@ -32,6 +32,12 @@ I hope nobody from Leaf Labs that finds this will feel insulted.
 
 -----
 
+If you are using Fedora linux and want to use USB you will need to find
+ModemManager and get rid of it.  It will compete with you for access to
+/dev/ttyACM0 for the first 15 seconds and send characters to that device.
+
+-----
+
 One thing I have particularly enjoyed is that I fixed an issue with the
 original libmaple.  I use an STlink SWD dongle to load code into my
 STM32F103 and am used to simply typing "make burn" to load new code without
