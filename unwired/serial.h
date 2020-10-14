@@ -55,11 +55,12 @@ uint8 serial_read ( int fd );
 uint8 serial_getc ( int fd );
 
 void console_init ( void );
-void set_std_serial ( int arg );
+void set_std_serial ( int );
 int getc ( void );
-void putc ( int ch );
-void puts ( char *msg );
-void printf ( char *fmt, ... );
+void putc ( int );
+void puts ( char * );
+void printf ( char *, ... );
+void sprintf ( char *, char *, ... );
 
 
 /* ------------------------------------------------------------- */

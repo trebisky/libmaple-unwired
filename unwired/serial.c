@@ -497,13 +497,23 @@ printf ( char *fmt, ... )
 {
 	char buf[PRINTF_BUF_SIZE];
         va_list args;
-        int rv;
 
         va_start ( args, fmt );
         asnprintf ( buf, PRINTF_BUF_SIZE, fmt, args );
         va_end ( args );
 
         serial_puts ( std_serial, buf );
+}
+
+/* The limit is absurd, so take care */
+void
+sprintf ( char *buf, char *fmt, ... )
+{
+        va_list args;
+
+        va_start ( args, fmt );
+        asnprintf ( buf, 256, fmt, args );
+        va_end ( args );
 }
 
 /* -------------------------------------------------- */
