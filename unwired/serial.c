@@ -411,6 +411,10 @@ asnprintf (char *abuf, unsigned int size, const char *fmt, va_list args)
 	    buf = sprintn ( buf, end, va_arg(args,int) );
 	    continue;
 	}
+	if ( c == 'x' ) {
+	    buf = shex2 ( buf, end, va_arg(args,int) & 0xff );
+	    continue;
+	}
 	if ( c == 'h' ) {
 	    buf = shex8 ( buf, end, va_arg(args,int) );
 	    continue;
