@@ -1,8 +1,14 @@
 # Sources to compile
 #SRC_FILES = main.cpp
 #OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.cpp=.o))
-# tjt - flip to this
-SRC_FILES = main.c
+
+# tjt - We are only doing c sources now!
+###SRC_FILES = main.c
+
+# tjt - See if this will handle more than one source file
+# It will !!!
+SRC_FILES = main.c gps_lcd.c
+
 OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.c=.o))
 
 ##$(BUILD_PATH)/%.o: %.cpp
@@ -23,7 +29,10 @@ library: $(BUILD_PATH)/libmaple.a
 .PHONY: library
 
 $(BUILD_PATH)/$(BOARD).elf: $(BUILDDIRS) $(TGT_BIN) $(OBJ_FILES)
-	$(SILENT_LD) $(CXX) $(LDFLAGS) -o $@ $(TGT_BIN) $(BUILD_PATH)/main.o -Wl,-Map,$(BUILD_PATH)/$(BOARD).map
+	$(SILENT_LD) $(CC) $(LDFLAGS) -o $@ $(TGT_BIN) $(OBJ_FILES) -Wl,-Map,$(BUILD_PATH)/$(BOARD).map
+
+#$(BUILD_PATH)/$(BOARD).elf: $(BUILDDIRS) $(TGT_BIN) $(OBJ_FILES)
+#	$(SILENT_LD) $(CXX) $(LDFLAGS) -o $@ $(TGT_BIN) $(BUILD_PATH)/main.o -Wl,-Map,$(BUILD_PATH)/$(BOARD).map
 
 $(BUILD_PATH)/$(BOARD).hex: $(BUILD_PATH)/$(BOARD).elf
 	$(SILENT_OBJCOPY) $(OBJCOPY) -v -Oihex $(BUILD_PATH)/$(BOARD).elf $@ 1>/dev/null

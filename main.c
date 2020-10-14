@@ -24,6 +24,20 @@
 
 #include <string.h>
 
+/* Bogus nonsense until I clean up the API
+ */
+struct i2c {
+};
+
+/* This may as well be global since it is nonsense.
+ * There is really no need to initialize it.
+ */
+struct i2c *ip = (void *) 0;
+
+void lcd_begin ( void );
+void lcd_msg ( struct i2c *, char * );
+void lcd_msg2 ( struct i2c *, char * );
+
 #ifdef notdef
 /* I see this without satellite lock */
 $GNGSA,A,1,,,,,,,,,,,,,99.99,99.99,99.99*2E
@@ -66,6 +80,9 @@ $GNGGA,
 -28.4,M,	- Geoidal Separation in meters
 ,		- diff GPS station used (null field here)
 *70		- checksum
+
+--- Need to be able to handle a line like this:
+$GNGGA,224159.00,,,,,0,04,18.03,,,,,,*7F
  */
 
 /* NMEA must be no longer than 80 visible bytes, plus cr-lf terminator */
@@ -181,6 +198,8 @@ gps_line ( char *line )
 	printf ( "%s\n", line );
 
 	copy_to_comma ( raw, &line[7] );
+	if ( strlen(raw) != 9 )
+	    return;
 	colons ( time, raw );
 	ut2lt ( time );
 	printf ( "Time = %s\n", time );
@@ -193,9 +212,14 @@ gps_line ( char *line )
 		    copy_to_comma ( raw, p+1 );
 	    }
 	}
+	if ( strlen(raw) < 2 )
+	    return;
 	printf ( "Elev = %s\n", raw );
 	sprintf ( alt, "%d", m2f(raw) );
 	printf ( "Elev (f) = %s\n", alt );
+
+	lcd_msg ( ip, alt );
+	lcd_msg2 ( ip, time );
 }
 
 void
@@ -229,7 +253,10 @@ main(void)
 
     fd_gps = serial_begin ( SERIAL_2, 9600 );
 
-    // i2c_master_enable ( I2C2, 0);
+    lcd_begin ();
+
+    lcd_msg ( ip, "Eat more fish" );
+    lcd_msg2 ( ip, "GPS 5244" );
 
     printf ( "-- BOOTED -- off we go\n" );
 
