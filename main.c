@@ -66,25 +66,8 @@ $GNGGA,014126.00,3215.76919,N,11102.91426,W,1,05,1.59,740.6,M,-28.4,M,,*70
  * GL is GLONASS info
  * GPGSV is GPS satellites in view
  * GLGSV is Glonass satellites in view
- * GNGGA is a position, including a UT timestamp.
- *
- * GNGGA has the altitude, the fields are:
-$GNGGA,
-014126.00,    -- utc time hhmmss.sss
-3215.76919,N,  - latitude
-11102.91426,W, - longitude
-1,		- quality (1 = valid)
-05,		- number of satellites used
-1.59,		- HDOP (horizontal dilution of precision)
-740.6,M,	- altitude in meters
--28.4,M,	- Geoidal Separation in meters
-,		- diff GPS station used (null field here)
-*70		- checksum
-
---- Need to be able to handle a line like this:
-$GNGGA,224159.00,,,,,0,04,18.03,,,,,,*7F
+ * GNGGA is a position, including a UT timestamp and elevation.
  */
-
 /* NMEA must be no longer than 80 visible bytes, plus cr-lf terminator */
 #define NMEA_MAX	82
 
@@ -178,45 +161,84 @@ colons ( char *ctime, char *time )
     ctime[8] = '\0';
 }
 
+/*
+ * GNGGA has the altitude, the fields are:
+$GNGGA,
+1) 014126.00,    -- utc time hhmmss.sss
+2) 3215.76919,N,  - latitude
+4) 11102.91426,W, - longitude
+6) 1,		- quality (1 = valid)
+7) 05,		- number of satellites used
+8) 1.59,		- HDOP (horizontal dilution of precision)
+9) 740.6,M,	- altitude in meters
+10) -28.4,M,	- Geoidal Separation in meters
+11) ,		- diff GPS station used (null field here)
+12) *70		- checksum
+
+--- Need to be able to handle a line like this:
+$GNGGA,224159.00,,,,,0,04,18.03,,,,,,*7F
+ */
+
+void
+nmea_get ( char *buf, char *line, int count )
+{
+	int ccount;	/* count commas */
+	char *p;
+
+	if ( count == 0 ) {
+	    copy_to_comma ( buf, line );
+	    return;
+	}
+
+	ccount = 0;
+	for ( p = line; *p; p++ ) {
+	    if ( *p == ',' ) {
+		++ccount;
+		if ( ccount == count )
+		    copy_to_comma ( buf, p+1 );
+	    }
+	}
+}
+
 void
 gps_line ( char *line )
 {
 	char raw[12];
-	char alt[12];
-	char time[16];
-	char *p;
-	int ccount;	/* count commas */
+	char alt[17];
+	char time[12];
+	char nsat[4];
 
 	if ( line[6] != ',' )
 	    return;
-	    
-	line[6] = '\0';
-	if ( strcmp ( line, "$GNGGA" ) != 0 )
-	    return;
-	line[6] = ',';
 
+	nmea_get ( raw, line, 0 );
+	if ( strcmp ( raw, "$GNGGA" ) != 0 )
+	    return;
+
+	nmea_get ( nsat, line, 7 );
+	    
 	printf ( "%s\n", line );
 
-	copy_to_comma ( raw, &line[7] );
+	/* Get the UT time and convert to local */
+	nmea_get ( raw, line, 1 );
 	if ( strlen(raw) != 9 )
 	    return;
 	colons ( time, raw );
 	ut2lt ( time );
 	printf ( "Time = %s\n", time );
 
-	ccount = 0;
-	for ( p = line; *p; p++ ) {
-	    if ( *p == ',' ) {
-		++ccount;
-		if ( ccount == 9 )
-		    copy_to_comma ( raw, p+1 );
-	    }
+	/* Get the elevation im meters */
+	nmea_get ( raw, line, 9 );
+	if ( strlen(raw) < 1 ) {
+	    strcpy ( alt, " -- ? --" );
+	} else {
+	    printf ( "Elev = %s\n", raw );
+	    sprintf ( alt, "%d", m2f(raw) );
+	    printf ( "Elev (f) = %s\n", alt );
 	}
-	if ( strlen(raw) < 2 )
-	    return;
-	printf ( "Elev = %s\n", raw );
-	sprintf ( alt, "%d", m2f(raw) );
-	printf ( "Elev (f) = %s\n", alt );
+
+	strcat ( alt, "      " );
+	strcat ( alt, nsat );
 
 	lcd_msg ( ip, alt );
 	lcd_msg2 ( ip, time );
@@ -248,15 +270,20 @@ main(void)
     int fd;
     int fd_gps;
 
+    pinMode(BOARD_LED_PIN, OUTPUT);
+
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
+
+    toggleLED();
+    toggleLED();
 
     fd_gps = serial_begin ( SERIAL_2, 9600 );
 
     lcd_begin ();
 
-    lcd_msg ( ip, "Eat more fish" );
-    lcd_msg2 ( ip, "GPS 5244" );
+    // lcd_msg ( ip, "Eat more fish" );
+    // lcd_msg2 ( ip, "GPS 5244" );
 
     printf ( "-- BOOTED -- off we go\n" );
 

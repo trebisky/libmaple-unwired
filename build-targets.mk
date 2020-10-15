@@ -7,7 +7,7 @@
 
 # tjt - See if this will handle more than one source file
 # It will !!!
-SRC_FILES = main.c gps_lcd.c
+SRC_FILES = main.c i2c_lcd.c
 
 OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.c=.o))
 

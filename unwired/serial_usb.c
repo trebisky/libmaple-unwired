@@ -36,13 +36,13 @@
 #include <libmaple/nvic.h>
 #include <libmaple/usb_cdcacm.h>
 #include <libmaple/usb.h>
-#include <libmaple/iwdg.h>
+// #include <libmaple/iwdg.h>
 
 // #include <wirish/wirish.h>
 #include "unwired.h"
 
-static void rxHook(unsigned, void*);
-static void ifaceSetupHook(unsigned, void*);
+// static void rxHook(unsigned, void*);
+// static void ifaceSetupHook(unsigned, void*);
 
 /* The routines in this file are never intended to be called directly,
  * so I don't provide public prototypes.
@@ -50,39 +50,9 @@ static void ifaceSetupHook(unsigned, void*);
  * tjt
  */
 
-#ifdef notdef
-/* The maple mini had this pin wired to a USB disconnect circuit,
- * but the blue pill does no such thing.
- */
-#define BOARD_USB_DISC_DEV        GPIOB
-#define BOARD_USB_DISC_BIT        9
-
-static void
-usb_disc_enable(gpio_dev *disc_dev, uint8 disc_bit)
-{
-    /* Present ourselves to the host. Writing 0 to "disc" pin must
-     * pull USB_DP pin up while leaving USB_DM pulled down by the
-     * transceiver. See USB 2.0 spec, section 7.1.7.3. */
-    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(disc_dev, disc_bit, 0);
-}
-
-static void
-usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
-{
-    /* Turn off the interrupt and signal disconnect (see e.g. USB 2.0
-     * spec, section 7.1.7.3). */
-    nvic_irq_disable(NVIC_USB_LP_CAN_RX0);
-    gpio_write_bit(disc_dev, disc_bit, 1);
-}
-#endif
-
 /* tjt - as near as I can tell, this whole hook business
  * was all about boot loaders that I neither have, know
  * about, nor intend to use.
- * I thought this might have been what was causing weird
- * problems with STlink reset booting, but it isn't.
- * Whatever the case, I am not using USB boot loaders.
  */
 void
 usb_serial_begin (void)
@@ -199,10 +169,43 @@ usb_serial_getc ( void )
 
 /* ------------------------------------------------ */
 /* ------------------------------------------------ */
+
+/* This is all about the disconnect pin,
+ * which does not exist on a Blue Pill
+ */
+
+#ifdef notdef
+/* The maple mini had this pin wired to a USB disconnect circuit,
+ * but the blue pill does no such thing.
+ */
+#define BOARD_USB_DISC_DEV        GPIOB
+#define BOARD_USB_DISC_BIT        9
+
+static void
+usb_disc_enable(gpio_dev *disc_dev, uint8 disc_bit)
+{
+    /* Present ourselves to the host. Writing 0 to "disc" pin must
+     * pull USB_DP pin up while leaving USB_DM pulled down by the
+     * transceiver. See USB 2.0 spec, section 7.1.7.3. */
+    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(disc_dev, disc_bit, 0);
+}
+
+static void
+usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
+{
+    /* Turn off the interrupt and signal disconnect (see e.g. USB 2.0
+     * spec, section 7.1.7.3). */
+    nvic_irq_disable(NVIC_USB_LP_CAN_RX0);
+    gpio_write_bit(disc_dev, disc_bit, 1);
+}
+#endif
+
 /*
  * Bootloader hook stuff
  */
 
+#ifdef BOOTLOADER_HOOK_RUBBISH
 enum reset_state_t {
     DTR_UNSET,
     DTR_HIGH,
@@ -333,6 +336,7 @@ rxHook( unsigned hook, void *ignored )
         }
     }
 }
+#endif /* BOOTLOADER_HOOK_RUBBISH */
 
 /* ==================================================== */
 /* ==================================================== */

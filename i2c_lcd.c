@@ -20,14 +20,18 @@
  *  but to see the display, it really wants 5 volts.
  */
 
-#include <unwired.h>
+// Comment this out to use this as a library
+// #define RUN_AS_DEMO
 
+#include <unwired.h>
 #include <libmaple/i2c.h>
 
 /* totally bogus, but we will clean up later */
 struct i2c {
-    int bogus;
 };
+
+/* No reason this silly thing shouldn't be global */
+static struct i2c *ip = (struct i2c *) 0;
 
 void lcd_init ( struct i2c *ip );
 void lcd_begin ( void );
@@ -36,15 +40,13 @@ void lcd_msg2 ( struct i2c *ip, char *msg );
 
 void lcd_begin ( void )
 {
-	struct i2c *ip = (struct i2c *) 0;
-
 	/* Very important */
 	i2c_master_enable ( I2C2, 0);
 
 	lcd_init ( ip );
 }
 
-#ifdef notdef
+#ifdef RUN_AS_DEMO
 void
 lcd_test ( void )
 {

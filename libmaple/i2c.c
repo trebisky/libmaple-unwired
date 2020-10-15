@@ -238,7 +238,13 @@ int32 i2c_master_xfer (i2c_dev *dev,
     if ( dev->state == I2C_STATE_DISABLED )
 	return I2C_ERROR_PROTOCOL;
 
-    ASSERT(dev->state == I2C_STATE_IDLE);
+    /* Changed by tjt, I do see this now and then,
+     * and would rather return and allow error
+     * recovery than to crash on the ASSERT.
+     */
+    // ASSERT(dev->state == I2C_STATE_IDLE);
+    if ( dev->state != I2C_STATE_IDLE )
+	return I2C_ERROR_PROTOCOL;
 
     dev->msg = msgs;
     dev->msgs_left = num;
