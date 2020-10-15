@@ -19,9 +19,14 @@ BUILDDIRS += $(BUILD_PATH)/$(d)/$(TARGET_SERIES_MODULE)
 #WIRISH_INCLUDES := -I$(d)/include -I$(d)/$(WIRISH_BOARD_PATH)/include
 #UNWIRED_INCLUDES := -I$(d)/include
 
+# gives access to include files in this very directory
+UNWIRED_INCLUDES := -I$(d)
+# gives access to "series" in its new location
+UNWIRED_INCLUDES += -I$(TJT_PATH)/libmaple
+
 # Local flags. Add -I$(d) to allow for private includes.
 #CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) $(WIRISH_INCLUDES) -I$(d)
-CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) -I$(d)
+CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) $(UNWIRED_INCLUDES)
 
 # Local rules and targets
 sSRCS_$(d) := start.S

@@ -1,6 +1,7 @@
 # Try "make help" first
 
-.DEFAULT_GOAL := code
+# I hate the word "sketch"
+.DEFAULT_GOAL := vesuvius
 
 ##
 ## Useful paths, constants, etc.
@@ -96,7 +97,8 @@ LDFLAGS  = $(TARGET_LDFLAGS) $(TOOLCHAIN_LDFLAGS) -mcpu=cortex-m3 -mthumb \
 
 LIBMAPLE_MODULES += $(SRCROOT)/libmaple
 LIBMAPLE_MODULES += $(SRCROOT)/libmaple/usb   # The USB module is kept separate
-LIBMAPLE_MODULES += $(LIBMAPLE_MODULE_SERIES) # STM32 series submodule in libmaple
+# This was libmaple/stm32f1 - but I got rid of that 10-15-2020
+##LIBMAPLE_MODULES += $(LIBMAPLE_MODULE_SERIES) # STM32 series submodule in libmaple
 LIBMAPLE_MODULES += $(SRCROOT)/unwired
 
 # Official libraries:
@@ -119,7 +121,7 @@ $(foreach m,$(LIBMAPLE_MODULES),$(eval $(call LIBMAPLE_MODULE_template,$(m))))
 # main target
 include $(SRCROOT)/build-targets.mk
 
-.PHONY: install code clean help cscope tags ctags ram flash jtag doxygen mrproper list-boards
+.PHONY: install vesuvius clean help cscope tags ctags ram flash jtag doxygen mrproper list-boards
 
 # Target upload commands
 # USB ID for DFU upload -- FIXME: do something smarter with this
@@ -153,7 +155,7 @@ ifneq ($(PREV_BUILD_TYPE), $(MEMORY_TARGET))
 endif
 
 #sketch: build-check MSG_INFO $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
-code: build-check $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
+vesuvius: build-check $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
 
 clean:
 	rm -rf build
@@ -172,7 +174,7 @@ help:
 	@echo "or hack build-targets.mk appropriately.)"
 	@echo ""
 	@echo "Important targets:"
-	@echo "    code:     Compile for BOARD to MEMORY_TARGET (default)."
+	@echo "    vesuvius:     Compile for BOARD to MEMORY_TARGET (default)."
 	@echo "    install:  Compile and upload over USB using Maple bootloader"
 	@echo ""
 	@echo "You *must* set BOARD if not compiling for Maple (e.g."
@@ -213,13 +215,13 @@ ctags:
 	@echo "Made tags file for VIM code browsing"
 
 ram:
-	@$(MAKE) MEMORY_TARGET=ram --no-print-directory code
+	@$(MAKE) MEMORY_TARGET=ram --no-print-directory vesuvius
 
 flash:
-	@$(MAKE) MEMORY_TARGET=flash --no-print-directory code
+	@$(MAKE) MEMORY_TARGET=flash --no-print-directory vesuvius
 
 jtag:
-	@$(MAKE) MEMORY_TARGET=jtag --no-print-directory code
+	@$(MAKE) MEMORY_TARGET=jtag --no-print-directory vesuvius
 
 doxygen:
 	doxygen $(SUPPORT_PATH)/doxygen/Doxyfile

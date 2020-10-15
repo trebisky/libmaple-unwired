@@ -1,0 +1,18 @@
+#!/bin/ruby
+
+def fix ( cf )
+    nf = cf.sub /\.c$/,"_stm32f1.c"
+    cmd = "mv #{cf} ../#{nf}"
+    puts cmd
+    system cmd
+end
+
+fix "adc.c"
+fix "bkp.c"
+fix "dma.c"
+fix "exti.c"
+fix "fsmc.c"
+fix "gpio.c"
+fix "rcc.c"
+fix "spi.c"
+fix "timer.c"

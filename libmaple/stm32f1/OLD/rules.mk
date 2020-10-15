@@ -18,8 +18,8 @@ BUILDDIRS += $(BUILD_PATH)/$(d)/$(MCU_F1_LINE)
 # the Blue Pill uses a "performance line" chip.
 #sSRCS_$(d) := $(MCU_F1_LINE)/isrs.S
 #sSRCS_$(d) += $(MCU_F1_LINE)/vector_table.S
-sSRCS_$(d) := isrs.S
-sSRCS_$(d) += vector_table.S
+#sSRCS_$(d) := isrs.S
+#sSRCS_$(d) += vector_table.S
 
 cSRCS_$(d) := adc.c
 cSRCS_$(d) += bkp.c
@@ -27,7 +27,7 @@ cSRCS_$(d) += dma.c
 cSRCS_$(d) += exti.c
 cSRCS_$(d) += fsmc.c
 cSRCS_$(d) += gpio.c
-cSRCS_$(d) += i2c.c
+#cSRCS_$(d) += i2c.c
 cSRCS_$(d) += rcc.c
 cSRCS_$(d) += spi.c
 cSRCS_$(d) += timer.c

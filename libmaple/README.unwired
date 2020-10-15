@@ -25,3 +25,19 @@ This will "burn bridges" as far as supporting stm32f2 chips and such, but I
     supporting more than one chip from this code base, it serves me no
     purposes and just adds confusion.  Maybe I will hate myself for this
     someday, but such is life.
+
+--------------------------
+
+I just collapsed the stm32f1/performance directory back into stm32f1,
+abandoning the "value" directory, which only pertains to one board that
+I never heard of (the VLDiscovery).
+
+I'll just note in passing, this being as good as any place.
+That the STM32F1 is a "medium" density device.
+
+The directory now to annihilate is "series" as in
+stm32f1/include/series/*.h
+At some point these will all become things like i2c_stm32f1.h
+in the libmaple directory.
+I won't try to nuke these all at once, but let them follow along
+as I move the .c files from stm32f1
