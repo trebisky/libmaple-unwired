@@ -1,6 +1,6 @@
 # Try "make help" first
 
-.DEFAULT_GOAL := sketch
+.DEFAULT_GOAL := code
 
 ##
 ## Useful paths, constants, etc.
@@ -114,7 +114,7 @@ $(foreach m,$(LIBMAPLE_MODULES),$(eval $(call LIBMAPLE_MODULE_template,$(m))))
 # main target
 include $(SRCROOT)/build-targets.mk
 
-.PHONY: install sketch clean help cscope tags ctags ram flash jtag doxygen mrproper list-boards
+.PHONY: install code clean help cscope tags ctags ram flash jtag doxygen mrproper list-boards
 
 # Target upload commands
 # USB ID for DFU upload -- FIXME: do something smarter with this
@@ -148,7 +148,7 @@ ifneq ($(PREV_BUILD_TYPE), $(MEMORY_TARGET))
 endif
 
 #sketch: build-check MSG_INFO $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
-sketch: build-check $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
+code: build-check $(BUILD_PATH)/$(BOARD).bin $(BUILD_PATH)/$(BOARD).hex
 
 clean:
 	rm -rf build
@@ -167,7 +167,7 @@ help:
 	@echo "or hack build-targets.mk appropriately.)"
 	@echo ""
 	@echo "Important targets:"
-	@echo "    sketch:   Compile for BOARD to MEMORY_TARGET (default)."
+	@echo "    code:     Compile for BOARD to MEMORY_TARGET (default)."
 	@echo "    install:  Compile and upload over USB using Maple bootloader"
 	@echo ""
 	@echo "You *must* set BOARD if not compiling for Maple (e.g."
@@ -192,7 +192,7 @@ OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/ope
 # Some newer chips are shipping with a idcode of 0x2ba01477, this will make them work.
 #OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
 
-burn:
+burn:	build/maple_mini.elf
 	openocd $(OCDCFG) -c "program build/maple_mini.elf verify reset exit"
 
 cscope:
@@ -208,13 +208,13 @@ ctags:
 	@echo "Made tags file for VIM code browsing"
 
 ram:
-	@$(MAKE) MEMORY_TARGET=ram --no-print-directory sketch
+	@$(MAKE) MEMORY_TARGET=ram --no-print-directory code
 
 flash:
-	@$(MAKE) MEMORY_TARGET=flash --no-print-directory sketch
+	@$(MAKE) MEMORY_TARGET=flash --no-print-directory code
 
 jtag:
-	@$(MAKE) MEMORY_TARGET=jtag --no-print-directory sketch
+	@$(MAKE) MEMORY_TARGET=jtag --no-print-directory code
 
 doxygen:
 	doxygen $(SUPPORT_PATH)/doxygen/Doxyfile

@@ -29,7 +29,39 @@
  * @brief Independent watchdog (IWDG) support
  */
 
+#include <libmaple/libmaple_types.h>
 #include <libmaple/iwdg.h>
+
+/*
+ * To use the independent watchdog, first call iwdg_init() with the
+ * appropriate prescaler and IWDG counter reload values for your
+ * application.  Afterwards, you must periodically call iwdg_feed()
+ * before the IWDG counter reaches 0 to reset the counter to its
+ * reload value.  If you do not, the chip will reset.
+ *
+ * Once started, the independent watchdog cannot be turned off.
+ */
+
+/*
+ * Register map
+ */
+
+/** Independent watchdog register map type. */
+typedef struct iwdg_reg_map {
+    __io uint32 KR;             /**< Key register. */
+    __io uint32 PR;             /**< Prescaler register. */
+    __io uint32 RLR;            /**< Reload register. */
+    __io uint32 SR;             /**< Status register */
+} iwdg_reg_map;
+
+/** Independent watchdog base pointer */
+#define IWDG_BASE                       ((struct iwdg_reg_map*)0x40003000)
+
+/* Key register */
+
+#define IWDG_KR_UNLOCK                  0x5555
+#define IWDG_KR_FEED                    0xAAAA
+#define IWDG_KR_START                   0xCCCC
 
 /**
  * @brief Initialise and start the watchdog
@@ -41,7 +73,9 @@
  * @param prescaler Prescaler for the 40 kHz IWDG clock.
  * @param reload Independent watchdog counter reload value.
  */
-void iwdg_init(iwdg_prescaler prescaler, uint16 reload) {
+void
+iwdg_init(iwdg_prescaler prescaler, uint16 reload)
+{
    IWDG_BASE->KR = IWDG_KR_UNLOCK;
    IWDG_BASE->PR = prescaler;
    IWDG_BASE->RLR = reload;
@@ -57,6 +91,10 @@ void iwdg_init(iwdg_prescaler prescaler, uint16 reload) {
  * Calling this function will cause the IWDG counter to be reset to
  * its reload value.
  */
-void iwdg_feed(void) {
+void
+iwdg_feed(void)
+{
     IWDG_BASE->KR = IWDG_KR_FEED;
 }
+
+/* THE END */

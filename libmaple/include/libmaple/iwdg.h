@@ -47,6 +47,8 @@ extern "C"{
 
 #include <libmaple/libmaple_types.h>
 
+#ifdef not_here_anymore
+
 /*
  * Register map
  */
@@ -71,6 +73,8 @@ typedef struct iwdg_reg_map {
 #define IWDG_KR_UNLOCK                  0x5555
 #define IWDG_KR_FEED                    0xAAAA
 #define IWDG_KR_START                   0xCCCC
+
+#endif /* not_here_anymore */
 
 /* Prescaler register */
 

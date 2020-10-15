@@ -21,6 +21,7 @@
 #include <unwired.h>
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
+#include <libmaple/iwdg.h>
 
 #include <string.h>
 
@@ -200,6 +201,32 @@ nmea_get ( char *buf, char *line, int count )
 	}
 }
 
+/* Add blanks to a string to make it
+ * a certain length (must be space in
+ * the buffer of course)
+ */
+void
+pad_to ( char *buf, int n )
+{
+	int i;
+	int pad = 0;
+	char *p = buf;
+
+	while ( n-- ) {
+	    if ( pad )
+		*p++ = ' ';
+	    else {
+		if ( *p ) {
+		    p++;
+		    continue;
+		}
+		pad = 1;
+		*p++ = ' ';
+	    }
+	}
+	*p++ = '\0';
+}
+
 void
 gps_line ( char *line )
 {
@@ -237,11 +264,14 @@ gps_line ( char *line )
 	    printf ( "Elev (f) = %s\n", alt );
 	}
 
-	strcat ( alt, "      " );
+	pad_to ( alt, 14 );
 	strcat ( alt, nsat );
 
 	lcd_msg ( ip, alt );
 	lcd_msg2 ( ip, time );
+
+	iwdg_feed ();
+	printf ( " ~~ update finished\n" );
 }
 
 void
@@ -275,6 +305,7 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
+    /* Turn on LED */
     toggleLED();
     toggleLED();
 
@@ -282,8 +313,19 @@ main(void)
 
     lcd_begin ();
 
-    // lcd_msg ( ip, "Eat more fish" );
-    // lcd_msg2 ( ip, "GPS 5244" );
+    lcd_msg ( ip, "Starting ..." );
+
+    /* Sometimes i2c locks up, and until I find and
+     * fix that bug, this helps a lot.
+     * The iwdt is fed by a 40 khz clock.
+     * With a prescaler of 4, the iwdg counts at 4 khz.
+     * The reload register is only 12 bits (max value 0xfff)
+     * So this limits the total timeout to 409.6 milliseconds.
+     * We want about 2 seconds.  So use a 64 prescaler, which
+     * means the dog ticks at 1.6 ms and a preload of
+     * 2000 / 1.6 = 1250 gives us 2 seconds.
+     */
+    iwdg_init(IWDG_PRE_64, 1250);
 
     printf ( "-- BOOTED -- off we go\n" );
 
