@@ -12,6 +12,10 @@ else
 SRCROOT := $(LIB_MAPLE_HOME)
 endif
 BUILD_PATH = build
+
+# This lets me start moving stuff from libmaple/include/libmaple to libmaple
+TJT_PATH := $(SRCROOT)
+
 LIBMAPLE_PATH := $(SRCROOT)/libmaple
 UNWIRED_PATH := $(SRCROOT)/unwired
 SUPPORT_PATH := $(SRCROOT)/support
@@ -67,8 +71,9 @@ include $(MAKEDIR)/build-templates.mk
 # The order of these is important.
 # someday include/unwired will go away.
 TARGET_FLAGS    += -I$(UNWIRED_PATH)
+TARGET_FLAGS    += -I$(TJT_PATH)
 TARGET_FLAGS    += -I$(LIBMAPLE_PATH)/include/libmaple
-TARGET_FLAGS    += -I$(UNWIRED_PATH)/include/unwired \
+TARGET_FLAGS    += -I$(UNWIRED_PATH)/include/unwired
 
 #tjt#TARGET_FLAGS += -I$(LIBRARIES_PATH) # for internal lib. includes, e.g. <Wire/WireBase.h>
 

@@ -288,6 +288,24 @@ lcd_init ( struct i2c *ip )
 	delay_us ( DELAY_INIT );
 }
 
+/* As above, but don't clear display */
+void
+lcd_reinit ( struct i2c *ip )
+{
+	lcd_init_4 ( ip );
+
+	// printf ( "init_4 OK\n" );
+
+	lcd_cmd ( ip, INIT_CURSOR );
+	lcd_cmd ( ip, INIT_DISPLAY );
+	lcd_cmd ( ip, INIT_FUNC );
+
+	// lcd_cmd ( ip, CLEAR_DISPLAY );
+
+	// important
+	delay_us ( DELAY_INIT );
+}
+
 void
 lcd_loop ( struct i2c *ip )
 {

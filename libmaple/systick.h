@@ -39,40 +39,6 @@ extern "C"{
 #include <libmaple/libmaple_types.h>
 #include <libmaple/util.h>
 
-/** SysTick register map type */
-typedef struct systick_reg_map {
-    __io uint32 CSR;            /**< Control and status register */
-    __io uint32 RVR;            /**< Reload value register */
-    __io uint32 CNT;            /**< Current value register ("count") */
-    __io uint32 CVR;            /**< Calibration value register */
-} systick_reg_map;
-
-/** SysTick register map base pointer */
-#define SYSTICK_BASE                    ((struct systick_reg_map*)0xE000E010)
-
-/*
- * Register bit definitions.
- */
-
-/* Control and status register */
-
-#define SYSTICK_CSR_COUNTFLAG           BIT(16)
-#define SYSTICK_CSR_CLKSOURCE           BIT(2)
-#define SYSTICK_CSR_CLKSOURCE_EXTERNAL  0
-#define SYSTICK_CSR_CLKSOURCE_CORE      BIT(2)
-#define SYSTICK_CSR_TICKINT             BIT(1)
-#define SYSTICK_CSR_TICKINT_PEND        BIT(1)
-#define SYSTICK_CSR_TICKINT_NO_PEND     0
-#define SYSTICK_CSR_ENABLE              BIT(0)
-#define SYSTICK_CSR_ENABLE_MULTISHOT    BIT(0)
-#define SYSTICK_CSR_ENABLE_DISABLED     0
-
-/* Calibration value register */
-
-#define SYSTICK_CVR_NOREF               BIT(31)
-#define SYSTICK_CVR_SKEW                BIT(30)
-#define SYSTICK_CVR_TENMS               0xFFFFFF
-
 /** System elapsed time, in milliseconds */
 extern volatile uint32 systick_uptime_millis;
 
@@ -83,12 +49,17 @@ static inline uint32 systick_uptime(void) {
     return systick_uptime_millis;
 }
 
-
 void systick_init(uint32 reload_val);
 void systick_disable();
 void systick_enable();
 void systick_attach_callback(void (*)(void));
 
+uint32 systick_get_count(void);
+uint32 systick_check_underflow(void);
+
+#ifdef notdef
+/* tjt - no longer inline.
+ */
 /**
  * @brief Returns the current value of the SysTick counter.
  */
@@ -108,6 +79,7 @@ static inline uint32 systick_get_count(void) {
 static inline uint32 systick_check_underflow(void) {
     return SYSTICK_BASE->CSR & SYSTICK_CSR_COUNTFLAG;
 }
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

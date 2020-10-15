@@ -36,6 +36,7 @@ struct i2c {
 struct i2c *ip = (void *) 0;
 
 void lcd_begin ( void );
+void lcd_reinit ( void );
 void lcd_msg ( struct i2c *, char * );
 void lcd_msg2 ( struct i2c *, char * );
 
@@ -266,6 +267,10 @@ gps_line ( char *line )
 
 	pad_to ( alt, 14 );
 	strcat ( alt, nsat );
+
+	/* Should not need this, but ...
+	 */
+	lcd_reinit ();
 
 	lcd_msg ( ip, alt );
 	lcd_msg2 ( ip, time );

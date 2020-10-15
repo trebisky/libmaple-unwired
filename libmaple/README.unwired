@@ -1,0 +1,27 @@
+On 10-15-2020 I decided to bite the bullet and begin reorganizing
+the "libmaple" source tree.
+
+I will be doing this bit by bit as I take interest in different parts of
+what is there, but here are the rules and concepts:
+
+1) move files from include/libmaple to "."
+    This way the include file is alongside the related driver file,
+    not off in the weeds in some subdirectory.
+
+2) The above requires a minor change to the master Makefile, which has been made.
+
+3) move stuff from the .h file into the .c file where that is appropriate.
+    I very much like seeing things like the register map right alongside
+    the code that uses it.  This both saves me time and makes things
+    quicker and easier to understand.
+
+4) I also plan to start moving stuff from the stm32f1 directory.
+    I will do this in the following way.  If I move i2c.c for example,
+    I will rename it to be i2c_stm32f1.c and make appropriate additions
+    to the file lists in rules.mk
+
+This will "burn bridges" as far as supporting stm32f2 chips and such, but I
+    am only interested in the blue pill and while I admire the scheme for
+    supporting more than one chip from this code base, it serves me no
+    purposes and just adds confusion.  Maybe I will hate myself for this
+    someday, but such is life.
