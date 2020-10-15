@@ -12,8 +12,14 @@ ASFLAGS_$(d) = -I$(d) $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall -W
 BUILDDIRS += $(BUILD_PATH)/$(d)/$(MCU_F1_LINE)
 
 # Local rules and targets
-sSRCS_$(d) := $(MCU_F1_LINE)/isrs.S
-sSRCS_$(d) += $(MCU_F1_LINE)/vector_table.S
+# tjt - got rid of the value/performance dirs 10-15-2020
+# and just copied these here.
+# The only value board was VLDiscovery (whatever that is).
+# the Blue Pill uses a "performance line" chip.
+#sSRCS_$(d) := $(MCU_F1_LINE)/isrs.S
+#sSRCS_$(d) += $(MCU_F1_LINE)/vector_table.S
+sSRCS_$(d) := isrs.S
+sSRCS_$(d) += vector_table.S
 
 cSRCS_$(d) := adc.c
 cSRCS_$(d) += bkp.c
@@ -25,7 +31,7 @@ cSRCS_$(d) += i2c.c
 cSRCS_$(d) += rcc.c
 cSRCS_$(d) += spi.c
 cSRCS_$(d) += timer.c
-cSRCS_$(d) += usart.c
+#cSRCS_$(d) += usart.c
 
 sFILES_$(d) := $(sSRCS_$(d):%=$(d)/%)
 cFILES_$(d) := $(cSRCS_$(d):%=$(d)/%)
