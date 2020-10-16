@@ -168,7 +168,9 @@ void togglePin(uint8 pin);
  *
  * @see pinMode()
  */
-static inline void toggleLED() {
+static inline void
+toggleLED ( void )
+{
     togglePin(BOARD_LED_PIN);
 }
 

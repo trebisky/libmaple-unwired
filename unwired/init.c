@@ -57,6 +57,7 @@
 #include <libmaple/systick.h>
 
 #include "serial.h"
+// #include "io.h"
 
 void initialize_pin_map ( void );
 void board_setup_gpio(void);
@@ -245,7 +246,9 @@ init ( void )
 
     setup_nvic();
     systick_init(SYSTICK_RELOAD_VAL);
+
     board_setup_gpio ();
+
     board_setup_adcs ();
     board_setup_timers ();
 

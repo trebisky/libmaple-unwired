@@ -26,7 +26,9 @@
 
 /* STM32F1 performance line ISR weak declarations */
 
-#include <libmaple/stm32.h>
+// This would be to get the definition of: STM32_HIGH_DENSITY
+//   which should NOT be defined for the STM32F103
+// #include <libmaple/stm32.h>
 
 	.thumb
 

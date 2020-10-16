@@ -26,7 +26,10 @@
 
 /* STM32F1 performance line vector table */
 
-#include <libmaple/stm32.h>
+// This is to get the possible defnition 
+//  of STM32_HIGH_DENSITY, which would not be defined
+//  for the STM32F103
+// #include <libmaple/stm32.h>
 
 	.section	".stm32.interrupt_vector"
 

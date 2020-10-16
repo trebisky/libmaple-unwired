@@ -13,9 +13,9 @@ LIBMAPLE_PRIVATE_INCLUDES := -I$(LIBMAPLE_PATH)
 # Local flags
 CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall -Werror
 
-sSRCS_$(d) += vector_table.S
-sSRCS_$(d) := isrs.S
-sSRCS_$(d) := exc.S
+sSRCS_$(d) := vector_table.S
+sSRCS_$(d) += isrs.S
+sSRCS_$(d) += exc.S
 
 # Local rules and targets
 cSRCS_$(d) := adc.c
