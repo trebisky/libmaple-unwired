@@ -1,0 +1,4 @@
+There used to be a directory here "stm32f1", but I moved
+the handful of files there up a level, right alongside of this.
+
+The usb_lib directory is the ugly USB library from ST.

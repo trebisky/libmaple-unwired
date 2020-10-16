@@ -20,30 +20,39 @@
  *  but to see the display, it really wants 5 volts.
  */
 
-#include <unwired.h>
+// Comment this out to use this as a library
+// #define RUN_AS_DEMO
 
+#include <unwired.h>
 #include <libmaple/i2c.h>
 
 /* totally bogus, but we will clean up later */
 struct i2c {
-    int bogus;
 };
 
+/* No reason this silly thing shouldn't be global */
+static struct i2c *ip = (struct i2c *) 0;
+
 void lcd_init ( struct i2c *ip );
+void lcd_begin ( void );
 void lcd_msg ( struct i2c *ip, char *msg );
 void lcd_msg2 ( struct i2c *ip, char *msg );
 
-void
-lcd_test ( void )
+void lcd_begin ( void )
 {
-	struct i2c *ip = (struct i2c *) 0;
-
-	printf ( "Testing LCD\n" );
-
 	/* Very important */
 	i2c_master_enable ( I2C2, 0);
 
 	lcd_init ( ip );
+}
+
+#ifdef RUN_AS_DEMO
+void
+lcd_test ( void )
+{
+	printf ( "Testing LCD\n" );
+
+	lcd_begin ();
 
 	lcd_msg ( ip, "Eat more fish" );
 	lcd_msg2 ( ip, "GPS 5244" );
@@ -66,6 +75,7 @@ main(void)
 
     lcd_test ();
 }
+#endif
 
 /* Also bogus for now.
  * once things are working, absorb this into lcd_write()
@@ -273,6 +283,24 @@ lcd_init ( struct i2c *ip )
 	lcd_cmd ( ip, INIT_FUNC );
 
 	lcd_cmd ( ip, CLEAR_DISPLAY );
+
+	// important
+	delay_us ( DELAY_INIT );
+}
+
+/* As above, but don't clear display */
+void
+lcd_reinit ( struct i2c *ip )
+{
+	lcd_init_4 ( ip );
+
+	// printf ( "init_4 OK\n" );
+
+	lcd_cmd ( ip, INIT_CURSOR );
+	lcd_cmd ( ip, INIT_DISPLAY );
+	lcd_cmd ( ip, INIT_FUNC );
+
+	// lcd_cmd ( ip, CLEAR_DISPLAY );
 
 	// important
 	delay_us ( DELAY_INIT );

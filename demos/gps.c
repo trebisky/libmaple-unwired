@@ -21,8 +21,24 @@
 #include <unwired.h>
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
+#include <libmaple/iwdg.h>
 
 #include <string.h>
+
+/* Bogus nonsense until I clean up the API
+ */
+struct i2c {
+};
+
+/* This may as well be global since it is nonsense.
+ * There is really no need to initialize it.
+ */
+struct i2c *ip = (void *) 0;
+
+void lcd_begin ( void );
+void lcd_reinit ( void );
+void lcd_msg ( struct i2c *, char * );
+void lcd_msg2 ( struct i2c *, char * );
 
 #ifdef notdef
 /* I see this without satellite lock */
@@ -52,22 +68,8 @@ $GNGGA,014126.00,3215.76919,N,11102.91426,W,1,05,1.59,740.6,M,-28.4,M,,*70
  * GL is GLONASS info
  * GPGSV is GPS satellites in view
  * GLGSV is Glonass satellites in view
- * GNGGA is a position, including a UT timestamp.
- *
- * GNGGA has the altitude, the fields are:
-$GNGGA,
-014126.00,    -- utc time hhmmss.sss
-3215.76919,N,  - latitude
-11102.91426,W, - longitude
-1,		- quality (1 = valid)
-05,		- number of satellites used
-1.59,		- HDOP (horizontal dilution of precision)
-740.6,M,	- altitude in meters
--28.4,M,	- Geoidal Separation in meters
-,		- diff GPS station used (null field here)
-*70		- checksum
+ * GNGGA is a position, including a UT timestamp and elevation.
  */
-
 /* NMEA must be no longer than 80 visible bytes, plus cr-lf terminator */
 #define NMEA_MAX	82
 
@@ -161,41 +163,120 @@ colons ( char *ctime, char *time )
     ctime[8] = '\0';
 }
 
+/*
+ * GNGGA has the altitude, the fields are:
+$GNGGA,
+1) 014126.00,    -- utc time hhmmss.sss
+2) 3215.76919,N,  - latitude
+4) 11102.91426,W, - longitude
+6) 1,		- quality (1 = valid)
+7) 05,		- number of satellites used
+8) 1.59,		- HDOP (horizontal dilution of precision)
+9) 740.6,M,	- altitude in meters
+10) -28.4,M,	- Geoidal Separation in meters
+11) ,		- diff GPS station used (null field here)
+12) *70		- checksum
+
+--- Need to be able to handle a line like this:
+$GNGGA,224159.00,,,,,0,04,18.03,,,,,,*7F
+ */
+
 void
-gps_line ( char *line )
+nmea_get ( char *buf, char *line, int count )
 {
-	char raw[12];
-	char alt[12];
-	char time[16];
-	char *p;
 	int ccount;	/* count commas */
+	char *p;
 
-	if ( line[6] != ',' )
+	if ( count == 0 ) {
+	    copy_to_comma ( buf, line );
 	    return;
-	    
-	line[6] = '\0';
-	if ( strcmp ( line, "$GNGGA" ) != 0 )
-	    return;
-	line[6] = ',';
-
-	printf ( "%s\n", line );
-
-	copy_to_comma ( raw, &line[7] );
-	colons ( time, raw );
-	ut2lt ( time );
-	printf ( "Time = %s\n", time );
+	}
 
 	ccount = 0;
 	for ( p = line; *p; p++ ) {
 	    if ( *p == ',' ) {
 		++ccount;
-		if ( ccount == 9 )
-		    copy_to_comma ( raw, p+1 );
+		if ( ccount == count )
+		    copy_to_comma ( buf, p+1 );
 	    }
 	}
-	printf ( "Elev = %s\n", raw );
-	sprintf ( alt, "%d", m2f(raw) );
-	printf ( "Elev (f) = %s\n", alt );
+}
+
+/* Add blanks to a string to make it
+ * a certain length (must be space in
+ * the buffer of course)
+ */
+void
+pad_to ( char *buf, int n )
+{
+	int i;
+	int pad = 0;
+	char *p = buf;
+
+	while ( n-- ) {
+	    if ( pad )
+		*p++ = ' ';
+	    else {
+		if ( *p ) {
+		    p++;
+		    continue;
+		}
+		pad = 1;
+		*p++ = ' ';
+	    }
+	}
+	*p++ = '\0';
+}
+
+void
+gps_line ( char *line )
+{
+	char raw[12];
+	char alt[17];
+	char time[12];
+	char nsat[4];
+
+	if ( line[6] != ',' )
+	    return;
+
+	nmea_get ( raw, line, 0 );
+	if ( strcmp ( raw, "$GNGGA" ) != 0 )
+	    return;
+
+	nmea_get ( nsat, line, 7 );
+	    
+	printf ( "%s\n", line );
+
+	/* Get the UT time and convert to local */
+	nmea_get ( raw, line, 1 );
+	if ( strlen(raw) != 9 )
+	    return;
+	colons ( time, raw );
+	ut2lt ( time );
+	printf ( "Time = %s\n", time );
+
+	/* Get the elevation im meters */
+	nmea_get ( raw, line, 9 );
+	if ( strlen(raw) < 1 ) {
+	    strcpy ( alt, " -- ? --" );
+	} else {
+	    printf ( "Elev = %s\n", raw );
+	    sprintf ( alt, "%d", m2f(raw) );
+	    printf ( "Elev (f) = %s\n", alt );
+	}
+
+	pad_to ( alt, 14 );
+	strcat ( alt, nsat );
+
+	/* Should not need this, but ...
+	 */
+	lcd_reinit ();
+
+	lcd_msg ( ip, alt );
+	lcd_msg2 ( ip, time );
+
+	iwdg_feed ();
+	printf ( " ~~ update finished\n" );
 }
 
 void
@@ -224,12 +305,32 @@ main(void)
     int fd;
     int fd_gps;
 
+    pinMode(BOARD_LED_PIN, OUTPUT);
+
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
+    /* Turn on LED */
+    toggleLED();
+    toggleLED();
+
     fd_gps = serial_begin ( SERIAL_2, 9600 );
 
-    // i2c_master_enable ( I2C2, 0);
+    lcd_begin ();
+
+    lcd_msg ( ip, "Starting ..." );
+
+    /* Sometimes i2c locks up, and until I find and
+     * fix that bug, this helps a lot.
+     * The iwdt is fed by a 40 khz clock.
+     * With a prescaler of 4, the iwdg counts at 4 khz.
+     * The reload register is only 12 bits (max value 0xfff)
+     * So this limits the total timeout to 409.6 milliseconds.
+     * We want about 2 seconds.  So use a 64 prescaler, which
+     * means the dog ticks at 1.6 ms and a preload of
+     * 2000 / 1.6 = 1250 gives us 2 seconds.
+     */
+    iwdg_init(IWDG_PRE_64, 1250);
 
     printf ( "-- BOOTED -- off we go\n" );
 
