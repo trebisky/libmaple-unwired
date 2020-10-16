@@ -61,8 +61,10 @@ typedef enum i2c_state {
 typedef struct i2c_dev {
     struct i2c_reg_map *regs;   /**< Register map */
     struct i2c_msg *msg;        /**< Messages */
-    uint32 error_flags;         /**< Error flags, set on I2C error condition */
-    volatile uint32 timestamp;  /**< For internal use */
+    /* uint32 error_flags;         < Error flags, set on I2C error condition */
+    uint32 error_sr1;           /**< Error flags, SR1 verbatim */
+    uint32 error_sr2;           /**< Error flags, SR2 verbatim */
+    volatile uint32 timestamp;  /**< For internal use (timeouts) */
 
     /**
      * @brief Deprecated. Use .scl_port or .sda_port instead.

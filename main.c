@@ -7,335 +7,368 @@
  * more details.
  */
 
-/* ------------------------------------------------------------- */
-/* ------------------------------------------------------------- */
-/* GPS Altimeter
- *  10-13-2020
+/* This is a little "demo driver" for the HDC1008.
+ * I have one of these on a little Adafruit board.
+ * It uses I2C address 0x40, 0x41, 0x42 or 0x43
+ *  (without jumpers, it uses 0x40)
+ * This is a Texas Instruments part.
+ * It can be run from 3.3 or 5 volts.
  *
- * Keep using serial port 1 as a debug console.
- * Connect a Sparkfun SAM-M8Q to serial port 2.
+ *  HDC1008 temperature and humidity sensor
  */
-/* ------------------------------------------------------------- */
-/* ------------------------------------------------------------- */
+
+/* This began as i2c code in the Kyu project.
+ * Ported 10-12-2020 to libmaple-unwired.
+ */
 
 #include <unwired.h>
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
-#include <libmaple/iwdg.h>
 
-#include <string.h>
+/* Notes on the libmaple i2c API.
+ * It is all about calls to i2c_master_xfer(dev,msgs,num,timeout)
+ *  dev is the I2C device
+ *  msgs is one or more messages to send/receive
+ *  num is how many messages
+ *  timeout is a timeout, or 0 for no timeout.
+ *  return is:
+ *         0 on success,
+ *         I2C_ERROR_PROTOCOL if there was a protocol error,
+ *         I2C_ERROR_TIMEOUT if the transfer timed out.
+ */
 
-/* Bogus nonsense until I clean up the API
+/* totally bogus to simulate Kyu API,
+ *  --- we will clean up later.
  */
 struct i2c {
+    int bogus;
 };
 
-/* This may as well be global since it is nonsense.
- * There is really no need to initialize it.
- */
-struct i2c *ip = (void *) 0;
+static void hdc_once ( struct i2c *, int );
 
-void lcd_begin ( void );
-void lcd_reinit ( void );
-void lcd_msg ( struct i2c *, char * );
-void lcd_msg2 ( struct i2c *, char * );
-
-#ifdef notdef
-/* I see this without satellite lock */
-$GNGSA,A,1,,,,,,,,,,,,,99.99,99.99,99.99*2E
-$GNGSA,A,1,,,,,,,,,,,,,99.99,99.99,99.99*2E
-$GPGSV,1,1,00*79
-$GLGSV,1,1,01,71,,,28*68
-$GNGLL,,,,,013104.00,V,N*53
-$GNRMC,013105.00,V,,,,,,,141020,,,N*63
-$GNVTG,,,,,,,,,N*2E
-$GNGGA,013105.00,,,,,0,00,99.99,,,,,,*7E
-
-/* Once we get lock, I see this */
-$GNGSA,A,3,04,26,09,,,,,,,,,,3.09,1.59,2.65*13
-$GNGSA,A,3,71,69,,,,,,,,,,,3.09,1.59,2.65*13
-$GPGSV,2,1,07,04,67,003,25,06,04,290,,07,25,263,18,08,06,156,*77
-$GPGSV,2,2,07,09,37,316,22,16,60,078,18,26,29,046,21*4E
-$GLGSV,2,1,07,69,37,138,27,70,76,353,,71,24,329,28,73,48,240,*6A
-$GLGSV,2,2,07,74,02,224,,79,15,034,16,80,67,359,*5B
-$GNGLL,3215.76915,N,11102.91418,W,014125.00,A,A*69
-$GNRMC,014126.00,A,3215.76919,N,11102.91426,W,0.309,,141020,,,A*7E
-$GNVTG,,T,,M,0.309,N,0.573,K,A*36
-$GNGGA,014126.00,3215.76919,N,11102.91426,W,1,05,1.59,740.6,M,-28.4,M,,*70
-#endif
-
-/* GP is GPS info
- * GL is GLONASS info
- * GPGSV is GPS satellites in view
- * GLGSV is Glonass satellites in view
- * GNGGA is a position, including a UT timestamp and elevation.
- */
-/* NMEA must be no longer than 80 visible bytes, plus cr-lf terminator */
-#define NMEA_MAX	82
-
-/* copy from src up to but not including comma */
 void
-copy_to_comma ( char *dest, char *src )
+hdc_test ( void )
 {
-	char *p;
-	char *q;
+	struct i2c *ip;
+	int count = 0;
 
-	q = dest;
-	for ( p = src; *p; p++ ) {
-	    if ( *p == ',' )
-		break;
-	    *q++ = *p;
-	}
-	*q = '\0';
-}
+	ip = (struct i2c *) 0;
 
-/* Convert a string like "723.0" in meters
- * to an integer elevation in feet like 2372.05
- *  1 meter = 3.28084 feet
- * My house is at approximately 2400 feet.
- *  which is 731.5 meters
- */
-int
-m2f ( char *alt )
-{
-	char *p;
-	int m = 0;
-	int rv;
-
-	for ( p=alt; *p; p++ ) {
-	    if ( *p == '.' )
-		continue;
-	    m = m*10 + (*p-'0');
+	for ( ;; ) {
+	    hdc_once ( ip, ++count );
+	    // delay ( 1000 );
+	    delay ( 20 );
 	}
 
-	rv = m * 3;
-	m /= 10;
-	rv += m * 2;
-	m /= 10;
-	rv += m * 8;
-	m /= 10;
-	m /= 10;
-	rv += m * 8;
-	m /= 10;
-	rv += m * 4;
-
-	return (rv+5) / 10;
-}
-
-/* Arizona */
-#define TIME_ZONE	-7
-
-void
-ut2lt ( char *time )
-{
-	char *p;
-	int hour;
-	int d1, d2;
-
-	for ( p=time; *p; p++ )
-	    if ( *p == '.' )
-		*p = '\0';
-
-	hour = time[0] - '0';
-	hour = hour*10 + time[1] - '0';
-	hour += TIME_ZONE;
-	if ( hour < 0 ) hour += 24;
-	if ( hour > 23 ) hour -= 24;
-	d2 = hour % 10;
-	d1 = hour / 10;
-	time[0] = d1 + '0';
-	time[1] = d2 + '0';
-}
-
-void
-colons ( char *ctime, char *time )
-{
-    ctime[0] = time[0];
-    ctime[1] = time[1];
-    ctime[2] = ':';
-
-    ctime[3] = time[2];
-    ctime[4] = time[3];
-    ctime[5] = ':';
-
-    ctime[6] = time[4];
-    ctime[7] = time[5];
-    ctime[8] = '\0';
-}
-
-/*
- * GNGGA has the altitude, the fields are:
-$GNGGA,
-1) 014126.00,    -- utc time hhmmss.sss
-2) 3215.76919,N,  - latitude
-4) 11102.91426,W, - longitude
-6) 1,		- quality (1 = valid)
-7) 05,		- number of satellites used
-8) 1.59,		- HDOP (horizontal dilution of precision)
-9) 740.6,M,	- altitude in meters
-10) -28.4,M,	- Geoidal Separation in meters
-11) ,		- diff GPS station used (null field here)
-12) *70		- checksum
-
---- Need to be able to handle a line like this:
-$GNGGA,224159.00,,,,,0,04,18.03,,,,,,*7F
- */
-
-void
-nmea_get ( char *buf, char *line, int count )
-{
-	int ccount;	/* count commas */
-	char *p;
-
-	if ( count == 0 ) {
-	    copy_to_comma ( buf, line );
-	    return;
-	}
-
-	ccount = 0;
-	for ( p = line; *p; p++ ) {
-	    if ( *p == ',' ) {
-		++ccount;
-		if ( ccount == count )
-		    copy_to_comma ( buf, p+1 );
-	    }
-	}
-}
-
-/* Add blanks to a string to make it
- * a certain length (must be space in
- * the buffer of course)
- */
-void
-pad_to ( char *buf, int n )
-{
-	int i;
-	int pad = 0;
-	char *p = buf;
-
-	while ( n-- ) {
-	    if ( pad )
-		*p++ = ' ';
-	    else {
-		if ( *p ) {
-		    p++;
-		    continue;
-		}
-		pad = 1;
-		*p++ = ' ';
-	    }
-	}
-	*p++ = '\0';
-}
-
-void
-gps_line ( char *line )
-{
-	char raw[12];
-	char alt[17];
-	char time[12];
-	char nsat[4];
-
-	if ( line[6] != ',' )
-	    return;
-
-	nmea_get ( raw, line, 0 );
-	if ( strcmp ( raw, "$GNGGA" ) != 0 )
-	    return;
-
-	nmea_get ( nsat, line, 7 );
-	    
-	printf ( "%s\n", line );
-
-	/* Get the UT time and convert to local */
-	nmea_get ( raw, line, 1 );
-	if ( strlen(raw) != 9 )
-	    return;
-	colons ( time, raw );
-	ut2lt ( time );
-	printf ( "Time = %s\n", time );
-
-	/* Get the elevation im meters */
-	nmea_get ( raw, line, 9 );
-	if ( strlen(raw) < 1 ) {
-	    strcpy ( alt, " -- ? --" );
-	} else {
-	    printf ( "Elev = %s\n", raw );
-	    sprintf ( alt, "%d", m2f(raw) );
-	    printf ( "Elev (f) = %s\n", alt );
-	}
-
-	pad_to ( alt, 14 );
-	strcat ( alt, nsat );
-
-	/* Should not need this, but ...
-	 */
-	lcd_reinit ();
-
-	lcd_msg ( ip, alt );
-	lcd_msg2 ( ip, time );
-
-	iwdg_feed ();
-	printf ( " ~~ update finished\n" );
-	toggleLED();
-}
-
-void
-gps ( int fd )
-{
-    int c;
-    char buf[NMEA_MAX];
-    char *p;
-
-    p = buf;
-    for ( ;; ) {
-	c = serial_getc ( fd );
-	if ( c == '\n' ) {
-	    *p = '\0';
-	    if ( p != buf )
-		gps_line ( buf );
-	    p = buf;
-	} else
-	    *p++ = c;
-    }
+	// hdc_once ( ip );
+	// hdc_con_get ( ip );
+	// hdc_serial_get ( ip );
 }
 
 void
 main(void)
 {
     int fd;
-    int fd_gps;
-
-    pinMode(BOARD_LED_PIN, OUTPUT);
-
-    /* Turn on LED */
-    toggleLED();
-    toggleLED();
 
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-
-    fd_gps = serial_begin ( SERIAL_2, 9600 );
-
-    lcd_begin ();
-
-    lcd_msg ( ip, "Starting ..." );
-
-    /* Sometimes i2c locks up, and until I find and
-     * fix that bug, this helps a lot.
-     * The iwdt is fed by a 40 khz clock.
-     * With a prescaler of 4, the iwdg counts at 4 khz.
-     * The reload register is only 12 bits (max value 0xfff)
-     * So this limits the total timeout to 409.6 milliseconds.
-     * We want about 2 seconds.  So use a 64 prescaler, which
-     * means the dog ticks at 1.6 ms and a preload of
-     * 2000 / 1.6 = 1250 gives us 2 seconds.
-     */
-    iwdg_init(IWDG_PRE_64, 1250);
+    i2c_master_enable ( I2C2, 0);
 
     printf ( "-- BOOTED -- off we go\n" );
 
-    gps ( fd_gps );
+    hdc_test ();
 }
+
+#define I2C_TIMEOUT	3000
+
+#ifdef notdef
+/* These are in i2c.h */
+#define I2C_MSG_READ            0x1
+#define I2C_MSG_10BIT_ADDR      0x2
+#endif
+
+
+/* Also bogus for now.
+ * once things are working, absorb this into lcd_write()
+ * This is a kyu API.
+ */
+void
+i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
+{
+    i2c_msg write_msg;
+    int stat;
+
+    // printf ( "Start i2c_send\n" );
+
+    write_msg.addr = addr;
+    write_msg.flags = 0; // write, 7 bit address
+    write_msg.data = buf;
+    write_msg.length = count;
+    write_msg.xferred = 0;
+
+    stat = i2c_master_xfer ( I2C2, &write_msg, 1, I2C_TIMEOUT);
+    // printf ( "Finished i2c_send: returned: %d\n", stat );
+    if ( stat ) {
+	printf ( "Finished i2c_send: returned: %d\n", stat );
+	printf ( "Trouble with i2c, spinning\n" );
+	for ( ;; ) ;
+    }
+}
+
+void
+i2c_recv ( struct i2c *ip, int addr, unsigned char *buf, int count )
+{
+    i2c_msg read_msg;
+    int stat;
+
+    // printf ( "Start i2c_recv\n" );
+
+    read_msg.addr = addr;
+    read_msg.flags = I2C_MSG_READ;
+    read_msg.data = buf;
+    read_msg.length = count;
+    read_msg.xferred = 0;
+
+    stat = i2c_master_xfer ( I2C2, &read_msg, 1, I2C_TIMEOUT);
+    // printf ( "Finished i2c_recv: returned: %d\n", stat );
+    if ( stat ) {
+	printf ( "Finished i2c_recv: returned: %d\n", stat );
+	printf ( "Trouble with i2c, spinning\n" );
+	for ( ;; ) ;
+    }
+}
+
+/* Code below here is almost unchanged from Kyu
+ */
+
+/* ---------------------------------------------- */
+/* ---------------------------------------------- */
+
+/* HDC1008 driver
+ */
+
+#define HDC_ADDR	0x40
+
+/* These are the registers in the device */
+#define HDC_TEMP	0x00
+#define HDC_HUM		0x01
+#define HDC_CON		0x02
+
+#define HDC_SN1		0xFB
+#define HDC_SN2		0xFC
+#define HDC_SN3		0xFD
+
+/* bits/fields in config register */
+#define HDC_RESET	0x8000
+#define HDC_HEAT	0x2000
+#define HDC_BOTH	0x1000
+#define HDC_BSTAT	0x0800
+
+#define HDC_TRES14	0x0000
+#define HDC_TRES11	0x0400
+
+#define HDC_HRES14	0x0000
+#define HDC_HRES11	0x0100
+#define HDC_HRES8	0x0200
+
+/* Delays in microseconds */
+#define CONV_8		2500
+#define CONV_11		3650
+#define CONV_14		6350
+
+#define CONV_BOTH	12700
+
+/* We either read or write some register on the device.
+ * to write, there is one i2c transaction
+ *  we send 3 bytes (one is the register, then next two the value)
+ * to read, there are two i2c transations
+ *  The first sends one byte (the register number)
+ *  The second reads two bytes (the register value)
+ */
+
+/* Write to the config register -- tell it to do both conversions */
+static void
+hdc_con_both ( struct i2c *ip )
+{
+	unsigned char buf[3];
+
+	//(void) iic_write16 ( HDC_ADDR, HDC_CON, HDC_BOTH );
+	buf[0] = HDC_CON;
+	buf[1] = HDC_BOTH >> 8;
+	buf[2] = HDC_BOTH & 0xff;
+	i2c_send ( ip, HDC_ADDR, buf, 3 );
+
+	/* unfinished */
+}
+
+/* Read gets either T or H */
+static void
+hdc_con_single ( struct i2c *ip )
+{
+	unsigned char buf[3];
+
+	// (void) iic_write16 ( HDC_ADDR, HDC_CON, 0 );
+	buf[0] = HDC_CON;
+	buf[1] = 0;
+	buf[2] = 0;
+	i2c_send ( ip, HDC_ADDR, buf, 3 );
+
+	/* unfinished */
+}
+
+/* Get the contents of the config register
+ * After reset, the value seems to be 0x1000
+ *  which is HDC_BOTH
+ */
+static void
+hdc_con_get ( struct i2c *ip )
+{
+	unsigned char buf[2];
+	int val;
+
+	buf[0] = HDC_CON;
+	i2c_send ( ip, HDC_ADDR, buf, 1 );
+
+	i2c_recv ( ip, HDC_ADDR, buf, 2 );
+	val = buf[0] << 8 | buf[1];
+
+	printf ( "HDC1008 config = %04x\n", val );
+}
+
+#ifdef notdef
+/* Let's see if this autoincrements across 3 registers
+ * it does not:
+ * I get: 023c ffff ffff
+ */
+static void
+hdc_xserial_get ( struct i2c *ip )
+{
+	unsigned char buf[6];
+	int s1, s2, s3;
+
+	buf[0] = HDC_SN1;
+	i2c_send ( ip, HDC_ADDR, buf, 1 );
+
+	i2c_recv ( ip, HDC_ADDR, buf, 6 );
+
+	s1 = buf[0] << 8 | buf[1];
+	s2 = buf[2] << 8 | buf[3];
+	s3 = buf[4] << 8 | buf[5];
+
+	printf ( "HDC1008 X serial = %04x %04x %04x\n", s1, s2, s3 );
+}
+#endif
+
+/* Get the 3 bytes of serial information.
+ * I get: 023c ecab ee00
+ */
+static void
+hdc_serial_get ( struct i2c *ip )
+{
+	unsigned char buf[2];
+	int s1, s2, s3;
+
+	buf[0] = HDC_SN1;
+	i2c_send ( ip, HDC_ADDR, buf, 1 );
+	i2c_recv ( ip, HDC_ADDR, buf, 6 );
+	s1 = buf[0] << 8 | buf[1];
+
+	buf[0] = HDC_SN2;
+	i2c_send ( ip, HDC_ADDR, buf, 1 );
+	i2c_recv ( ip, HDC_ADDR, buf, 6 );
+	s2 = buf[0] << 8 | buf[1];
+
+	buf[0] = HDC_SN3;
+	i2c_send ( ip, HDC_ADDR, buf, 1 );
+	i2c_recv ( ip, HDC_ADDR, buf, 6 );
+	s3 = buf[0] << 8 | buf[1];
+
+	printf ( "HDC1008 serial = %04x %04x %04x\n", s1, s2, s3 );
+}
+
+/* Read both T and H */
+/* Here we write the register pointer to 0 (HDC_TEMP)
+ * then read 4 bytes (two registers).  This back to back read
+ * is described in the datasheet.  Apparently the internal
+ * register pointer increments automatically to the next
+ * register.  Perhaps we could read 6 bytes and also read
+ * the config register, which comes next.
+ *
+ * The device seems to power up in HDC_BOTH mode.
+ */
+
+static void
+hdc_read_both ( struct i2c *ip, unsigned int *buf )
+{
+	unsigned char bbuf[4];
+
+	bbuf[0] = HDC_TEMP;
+	i2c_send ( ip, HDC_ADDR, bbuf, 1 );
+
+	delay_us ( CONV_BOTH );
+
+	i2c_recv ( ip, HDC_ADDR, bbuf, 4 );
+
+	buf[0] = bbuf[0] << 8 | bbuf[1];
+	buf[1] = bbuf[2] << 8 | bbuf[3];
+}
+
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+/* -------------------------------------------------------------------- */
+
+static void
+hdc_once ( struct i2c *ip, int count )
+{
+	unsigned int iobuf[2];
+	int t, h;
+	int tf;
+
+	hdc_read_both ( ip, iobuf );
+
+	/*
+	t = 99;
+	h = 23;
+	tf = 0;
+	printf ( " Bogus t, tf, h = %d  %d %d\n", t, tf, h );
+	*/
+	// printf ( " HDC raw t,h = %04x  %04x\n", iobuf[0], iobuf[1] );
+
+	t = ((iobuf[0] * 165) / 65536)- 40;
+	tf = t * 18 / 10 + 32;
+
+	// printf ( " -- traw, t, tf = %04x %d   %d %d\n", iobuf[0], iobuf[0], t, tf );
+
+	//h = ((iobuf[1] * 100) / 65536);
+	//printf ( "HDC t, tf, h = %d  %d %d\n", t, tf, h );
+
+	h = ((iobuf[1] * 100) / 65536);
+	// printf ( " -- hraw, h = %04x %d    %d\n", iobuf[1], iobuf[1], h );
+
+	// printf ( "HDC temp(F), humid = %d %d\n", tf, h );
+
+	// printf ( "HDC temp(F), humid = %d %d (count = %d)\n", tf, h, count );
+}
+
+#ifdef notdef
+/* Kyu code */
+#define I2C_PORT	0
+
+void
+hdc_test ( void )
+{
+	struct i2c *ip;
+
+	ip = i2c_hw_new ( I2C_PORT );
+	ip = (struct i2c *) 0;
+
+	thr_new_repeat ( "hdc", hdc_once, ip, 13, 0, 1000 );
+
+	// hdc_once ( ip );
+	// hdc_con_get ( ip );
+	// hdc_serial_get ( ip );
+}
+#endif
+
 /* THE END */

@@ -206,6 +206,34 @@ void i2c_master_enable(i2c_dev *dev, uint32 flags) {
     dev->state = I2C_STATE_IDLE;
 }
 
+static int
+i2c_err ( i2c_dev *dev, char *msg, int rv )
+{
+    int i;
+    int wait;
+
+    printf ( "i2c_error, state = %d\n", dev->state );
+
+    for ( i=0; i<10; i++ ) {
+	delay_us ( 1000 );
+	if ( dev->state == I2C_STATE_XFER_DONE) {
+	    printf ( "i2c_error, state = %d\n", dev->state );
+	    printf ( "i2c_error,  --\"%s\"--\n", msg );
+	    printf ( "i2c_error, OK after extra %d\n", i+1 );
+            wait = systick_uptime()-dev->timestamp;
+	    printf ( "i2c_error, OK after timeout %d\n", wait );
+	    // return 0;
+	    return rv;
+	}
+    }
+    printf ( "i2c_error, state = %d\n", dev->state );
+    printf ( "i2c_error, error SR1 = %h\n", dev->error_sr1 );
+    printf ( "i2c_error, error SR2 = %h\n", dev->error_sr2 );
+    printf ( "i2c_error, stuck bad\n" );
+    printf ( "i2c_error,  \"%s\"\n", msg );
+    return rv;
+}
+
 /**
  * @brief Process an i2c transaction.
  *
@@ -236,7 +264,7 @@ int32 i2c_master_xfer (i2c_dev *dev,
      * to properly get things started.
      */
     if ( dev->state == I2C_STATE_DISABLED )
-	return I2C_ERROR_PROTOCOL;
+	return i2c_err ( dev, "Disabled", I2C_ERROR_PROTOCOL );
 
     /* Changed by tjt, I do see this now and then,
      * and would rather return and allow error
@@ -244,7 +272,7 @@ int32 i2c_master_xfer (i2c_dev *dev,
      */
     // ASSERT(dev->state == I2C_STATE_IDLE);
     if ( dev->state != I2C_STATE_IDLE )
-	return I2C_ERROR_PROTOCOL;
+	return i2c_err ( dev, "Not idle", I2C_ERROR_PROTOCOL );
 
     dev->msg = msgs;
     dev->msgs_left = num;
@@ -254,14 +282,15 @@ int32 i2c_master_xfer (i2c_dev *dev,
     i2c_enable_irq(dev, I2C_IRQ_EVENT);
     i2c_start_condition(dev);
 
+    if ( dev->state == I2C_STATE_ERROR )
+	return i2c_err ( dev, "Start failed", I2C_ERROR_PROTOCOL );
+
     rc = wait_for_state_change(dev, I2C_STATE_XFER_DONE, timeout);
-    if (rc < 0) {
-        goto out;
-    }
+    if ( rc )
+	return i2c_err ( dev, "wait for done", rc );
 
     dev->state = I2C_STATE_IDLE;
-out:
-    return rc;
+    return 0;
 }
 
 /**
@@ -275,28 +304,35 @@ static inline int32
 wait_for_state_change(i2c_dev *dev, i2c_state state, uint32 timeout)
 {
     i2c_state tmp;
+    int wait;
+    int istate = dev->state;
 
     /* Polling loop waiting for the state we desire.
      */
     for ( ;; ) {
         tmp = dev->state;
+	wait = systick_uptime() - dev->timestamp;
 
         if (tmp == I2C_STATE_ERROR)
             return I2C_STATE_ERROR;
 
-        if (tmp == state)
+        if (tmp == state) {
+	    printf ( "OK - wait for %d -> %d (%d)\n", istate, tmp, wait );
             return 0;
+	}
 
 	// printf ( "i2c wait: tmo = %d, upt = %d\n", timeout, systick_uptime()-dev->timestamp );
 
         if (timeout) {
-            if (systick_uptime()-dev->timestamp > timeout ) {
+            if ( wait > timeout ) {
                 /* TODO: overflow? */
                 /* TODO: racy? */
+		printf ( " TMO! - wait for %d -> %d (%d)\n", istate, tmp, wait );
                 return I2C_ERROR_TIMEOUT;
             }
         }
     }
+    /* Notreached */
 }
 
 /*
@@ -476,10 +512,15 @@ void _i2c_irq_handler(i2c_dev *dev) {
 void _i2c_irq_error_handler(i2c_dev *dev) {
     I2C_CRUMB(ERROR_ENTRY, dev->regs->SR1, dev->regs->SR2);
 
+    /*
     dev->error_flags = dev->regs->SR2 & (I2C_SR1_BERR |
                                          I2C_SR1_ARLO |
                                          I2C_SR1_AF |
                                          I2C_SR1_OVR);
+     */
+    dev->error_sr1 = dev->regs->SR1;
+    dev->error_sr2 = dev->regs->SR2;
+
     /* Clear flags */
     dev->regs->SR1 = 0;
     dev->regs->SR2 = 0;

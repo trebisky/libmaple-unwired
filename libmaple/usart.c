@@ -57,6 +57,7 @@ void usart_init(usart_dev *dev) {
  */
 void usart_enable(usart_dev *dev) {
     usart_reg_map *regs = dev->regs;
+
     regs->CR1 = (USART_CR1_TE | USART_CR1_RE | USART_CR1_RXNEIE |
                  USART_CR1_M_8N1);
     regs->CR1 |= USART_CR1_UE;
@@ -91,6 +92,7 @@ void usart_disable(usart_dev *dev) {
 uint32 usart_tx(usart_dev *dev, const uint8 *buf, uint32 len) {
     usart_reg_map *regs = dev->regs;
     uint32 txed = 0;
+
     while ((regs->SR & USART_SR_TXE) && (txed < len)) {
         regs->DR = buf[txed++];
     }
@@ -106,6 +108,7 @@ uint32 usart_tx(usart_dev *dev, const uint8 *buf, uint32 len) {
  */
 uint32 usart_rx(usart_dev *dev, uint8 *buf, uint32 len) {
     uint32 rxed = 0;
+
     while (usart_data_available(dev) && rxed < len) {
         *buf++ = usart_getc(dev);
         rxed++;
@@ -136,3 +139,5 @@ void usart_putudec(usart_dev *dev, uint32 val) {
         usart_putc(dev, digits[i]);
     }
 }
+
+/* THE END */

@@ -14,6 +14,10 @@
  *
  * Keep using serial port 1 as a debug console.
  * Connect a Sparkfun SAM-M8Q to serial port 2.
+ *
+ * This also needs the i2c_lcd.c driver
+ * and you will need to change a line in build-targets.mk
+ * so it will compile and link both files.
  */
 /* ------------------------------------------------------------- */
 /* ------------------------------------------------------------- */
@@ -277,6 +281,7 @@ gps_line ( char *line )
 
 	iwdg_feed ();
 	printf ( " ~~ update finished\n" );
+	toggleLED();
 }
 
 void
@@ -307,12 +312,13 @@ main(void)
 
     pinMode(BOARD_LED_PIN, OUTPUT);
 
-    fd = serial_begin ( SERIAL_1, 115200 );
-    set_std_serial ( fd );
-
     /* Turn on LED */
     toggleLED();
     toggleLED();
+
+    fd = serial_begin ( SERIAL_1, 115200 );
+    set_std_serial ( fd );
+
 
     fd_gps = serial_begin ( SERIAL_2, 9600 );
 
