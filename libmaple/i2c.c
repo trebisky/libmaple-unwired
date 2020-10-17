@@ -33,6 +33,28 @@
  * Currently, only master mode is supported.
  */
 
+/* Tom Trebisky 10-16-2020
+ * This driver really didn't work "out of the box"
+ * It is flakey and intermittent
+ * I am now testing connected to an HDC1008 humidity and temperature sensor
+ * and getting a variety of failures.
+ */
+
+/* Some notes on i2c initialization:
+  1) Enable i2c and GPIOs clocks.
+  2) Configure the desired AF of the ports. (AF4 for i2c in stm32).
+  3) Configure GPIOs:
+    3a) set GPIOs as AF.
+    3b) set port speed.
+    3c) set port type (open-drain).
+    3d) set to no pull-up/pull-down.
+  4) Configure i2c. (registers CR2, CCR, CR1, OAR1, ...).
+
+  Doing 3 before 2 will not work.
+
+
+ */
+
 #include "i2c_private.h"
 
 #include <libmaple/libmaple.h>
