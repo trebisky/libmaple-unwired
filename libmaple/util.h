@@ -55,6 +55,7 @@ extern "C"{
  * Failure routines
  */
 
+void spin ( void );
 void __error(void);
 void _fail(const char*, int, const char*);
 void throb(void);

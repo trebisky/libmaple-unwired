@@ -50,6 +50,8 @@
 #include <libmaple/i2c.h>
 #include <libmaple/systick.h>
 
+#include <serial.h>
+
 #include <string.h>
 
 #ifndef UNUSED
@@ -345,6 +347,14 @@ void i2c_slave_enable(i2c_dev *dev, uint32 flags, uint32 freq)
     i2c_master_enable(dev, flags | I2C_SLAVE_MODE, freq);
 }
 
+static int8_t i2c_debug = 0;
+
+void
+i2c_set_debug ( int val )
+{
+	i2c_debug = val;
+    
+}
 
 /**
  * @brief Process an i2c transaction.
@@ -370,7 +380,24 @@ int32 i2c_master_xfer(i2c_dev *dev,
 
     ASSERT(dev->state == I2C_STATE_IDLE);
 
-    if (num == 0) return 0;
+    if ( i2c_debug ) {
+	printf ( "In i2c_master_xfer %h\n", dev );
+	printf ( " - i2c_master_xfer %d messages, timeout = %d\n", num, timeout );
+
+	/* Open up timeout when debugging since serial output adds delays */
+	timeout = 100;
+    }
+
+    /* check for silly call with no messages */
+    if ( num < 1 )
+	return 0;
+
+    if ( i2c_debug ) {
+	if ( msgs[0].flags & I2C_MSG_READ )
+	    printf ( " - i2c_READ; msg len = %d, flags = %h\n", msgs[0].length, msgs[0].flags );
+	else
+	    printf ( " - i2c_WRITE; msg len = %d, flags = %h\n", msgs[0].length, msgs[0].flags );
+    }
 
     // Wait for I2C to not be busy:
     uint32_t count = I2C_TIMEOUT_BUSY_FLAG * (F_CPU / 25U /1000U);
@@ -389,16 +416,27 @@ int32 i2c_master_xfer(i2c_dev *dev,
     dev->timestamp = systick_uptime();
     dev->state = I2C_STATE_BUSY;
 
+    /* Enable -- this starts the show */
     dev->regs->CR1 = I2C_CR1_PE;    // Enable but reset special flags
     dev->regs->SR1 = 0;             // Reset error/status flags
+
     i2c_enable_irq(dev, I2C_IRQ_EVENT | I2C_IRQ_ERROR);
+    if ( i2c_debug )
+	printf ( "i2c - HW enabled and IRQ enabled\n" );
+
+    /* Start -- this really starts the show */
     if (dev->msg[0].flags & I2C_MSG_READ) {
         dev->regs->CR1 = I2C_CR1_PE | I2C_CR1_START | I2C_CR1_ACK;
     } else {
         dev->regs->CR1 = I2C_CR1_PE | I2C_CR1_START;
     }
 
+    /* This next printf gets chopped up by a burst of IRQ printouts */
+    // if ( i2c_debug )
+    //     printf ( "i2c xfer, begin wait\n" );
     rc = wait_for_state_change(dev, I2C_STATE_XFER_DONE, timeout);
+    if ( i2c_debug )
+	printf ( "i2c xfer, wait done: %d\n", rc );
 
     i2c_disable_irq(dev, I2C_IRQ_BUFFER | I2C_IRQ_EVENT | I2C_IRQ_ERROR);
 
@@ -466,6 +504,10 @@ int32 wait_for_state_change(i2c_dev *dev,
  * Handles transmission/reception.
  */
 void _i2c_irq_handler(i2c_dev *dev) {
+
+    if ( i2c_debug )
+	printf ( "i2c_irq_handler\n" );
+
     // See Note in ST Specs:
     //  Reading I2C_SR2 after reading I2C_SR1 clears the ADDR flag, even if the ADDR flag was
     //  set after reading I2C_SR1. Consequently, I2C_SR2 must be read only when ADDR is found
@@ -473,7 +515,8 @@ void _i2c_irq_handler(i2c_dev *dev) {
 
     __IO uint32_t cr1 = dev->regs->CR1;     // initial control register
     __IO uint32_t sr1 = dev->regs->SR1;     // read status register
-    __IO uint32_t sr2 = 0;                  // reserved for reading the SR2 register, but save it for latter since reading it clears ADDR
+    __IO uint32_t sr2 = 0;                  // reserved for reading the SR2 register,
+					    // but save it for latter since reading it clears ADDR
 
     dev->timestamp = systick_uptime();      // Reset timeout counter
 
@@ -485,9 +528,13 @@ void _i2c_irq_handler(i2c_dev *dev) {
             if (curMsg->flags & I2C_MSG_READ) {         // read transaction:
                 if (sr1 & I2C_SR1_SB) {	    // start bit
                     // TODO : Add support for 10-bit address
+		    if ( i2c_debug )
+			printf ( "IRQ - (1) Send slave address: %h\n", curMsg->addr );
                     i2c_send_slave_addr(dev, curMsg->addr, 1);
                 } else {
                     if (sr1 & I2C_SR1_ADDR) { // address sent
+			if ( i2c_debug )
+			    printf ( "IRQ - (2) addr was sent, todo: %d\n", todo );
                         if (todo <= 1) {
                             dev->regs->CR1 = (cr1 &= ~I2C_CR1_ACK); // Disable ACK
                             sr2 = dev->regs->SR2;                   // Clear ADDR bit
@@ -506,6 +553,8 @@ void _i2c_irq_handler(i2c_dev *dev) {
                             bDone = 1;
                         }
                     } else {
+			if ( i2c_debug )
+			    printf ( "IRQ - (3) ..... todo: %d\n", todo );
                         int8_t bFlgRXNE = ((sr1 & I2C_SR1_RXNE) != 0);
                         int8_t bFlgBTF = ((sr1 & I2C_SR1_BTF) != 0);
 
@@ -754,6 +803,9 @@ void _i2c_irq_handler(i2c_dev *dev) {
 void _i2c_irq_error_handler(i2c_dev *dev) {
     __IO uint32_t sr1 = dev->regs->SR1;
     __IO uint32_t sr2 = dev->regs->SR2;
+
+    if ( i2c_debug )
+	printf ( "i2c_irq_error_handler\n" );
 
     dev->timestamp = systick_uptime();      // Reset timeout counter
 

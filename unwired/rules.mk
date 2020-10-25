@@ -34,8 +34,8 @@ cSRCS_$(d) := start_c.c
 
 cSRCS_$(d) += init.c
 cSRCS_$(d) += stm32f1_setup.c
-cSRCS_$(d) += stm32f1_debug.c
-cSRCS_$(d) += stm32f1_digital.c
+cSRCS_$(d) += debug_f1.c
+cSRCS_$(d) += digital_f1.c
 cSRCS_$(d) += stm32f1_util_hooks.c
 #cSRCS_$(d) += syscalls.c
 cSRCS_$(d) += board.c

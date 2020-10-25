@@ -35,7 +35,16 @@
 #include <libmaple/gpio.h>
 #include <libmaple/nvic.h>
 
-void printf ( char *fmt, ... );
+//void printf ( char *fmt, ... );
+#include <serial.h>
+
+void
+spin ( void )
+{
+	printf ( "Spinning ...\n" );
+	for ( ;; )
+	    ;
+}
 
 /* (Undocumented) hooks used by Wirish to direct our behavior here */
 extern __weak void __lm_error(void);
