@@ -44,18 +44,20 @@ struct i2c {
     int bogus;
 };
 
-static void hdc_once ( struct i2c * );
+static void hdc_once ( struct i2c *, int );
 
 void
 hdc_test ( void )
 {
 	struct i2c *ip;
+	int count = 0;
 
 	ip = (struct i2c *) 0;
 
 	for ( ;; ) {
-	    hdc_once ( ip );
-	    delay ( 1000 );
+	    hdc_once ( ip, ++count );
+	    // delay ( 1000 );
+	    delay ( 20 );
 	}
 
 	// hdc_once ( ip );
@@ -108,6 +110,7 @@ i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
     stat = i2c_master_xfer ( I2C2, &write_msg, 1, I2C_TIMEOUT);
     // printf ( "Finished i2c_send: returned: %d\n", stat );
     if ( stat ) {
+	printf ( "Finished i2c_send: returned: %d\n", stat );
 	printf ( "Trouble with i2c, spinning\n" );
 	for ( ;; ) ;
     }
@@ -130,6 +133,7 @@ i2c_recv ( struct i2c *ip, int addr, unsigned char *buf, int count )
     stat = i2c_master_xfer ( I2C2, &read_msg, 1, I2C_TIMEOUT);
     // printf ( "Finished i2c_recv: returned: %d\n", stat );
     if ( stat ) {
+	printf ( "Finished i2c_recv: returned: %d\n", stat );
 	printf ( "Trouble with i2c, spinning\n" );
 	for ( ;; ) ;
     }
@@ -315,7 +319,7 @@ hdc_read_both ( struct i2c *ip, unsigned int *buf )
 /* -------------------------------------------------------------------- */
 
 static void
-hdc_once ( struct i2c *ip )
+hdc_once ( struct i2c *ip, int count )
 {
 	unsigned int iobuf[2];
 	int t, h;
@@ -342,7 +346,9 @@ hdc_once ( struct i2c *ip )
 	h = ((iobuf[1] * 100) / 65536);
 	// printf ( " -- hraw, h = %04x %d    %d\n", iobuf[1], iobuf[1], h );
 
-	printf ( "HDC temp(F), humid = %d %d\n", tf, h );
+	// printf ( "HDC temp(F), humid = %d %d\n", tf, h );
+
+	// printf ( "HDC temp(F), humid = %d %d (count = %d)\n", tf, h, count );
 }
 
 #ifdef notdef

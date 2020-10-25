@@ -1,0 +1,8 @@
+* Get i2c to work
+* Test spi.
+* Rename all files xxx_stm32f1.c to xxx_f1.c
+* Get rid of the "series" directory (this will require renaming each file xxx_f1.h and changing
+    the include thereof appropriately).
+* Clean all the needless -I options from the Makefile
+* Import and/or study stuff in STM32duino.
+* Consider moving stuff in unwired into libmaple.

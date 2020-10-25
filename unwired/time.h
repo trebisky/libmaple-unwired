@@ -38,6 +38,7 @@
 // #include <wirish/boards.h>
 #include "boards.h"
 
+// XXX - tjt - ditch this synonym.  TODO
 /**
  * Returns time (in milliseconds) since the beginning of program
  * execution. On overflow, restarts at 0.

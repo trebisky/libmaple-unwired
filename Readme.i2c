@@ -1,0 +1,38 @@
+10-24-2020
+
+I am having trouble with the libmaple i2c.
+
+1) It works perfectly with the MPC4725 dac demo.
+I have run this for hours and am now at 31,448,000 transactions
+without an error.  But that is all it works with.
+
+2) It fails with protocol errors talking to my HDC1008
+temperature and humidity sensor almost immediately.
+
+2) It fails after several exchanges talking to my 16x2 LCD display
+that uses the PCF8574 i2c chip.  This same exact unit has run
+for almost a week connected to an Orange Pi board without an error.
+
+--- It occured to me that people use the STM32 via the STM32duino
+software to do i2c and report success, so I thought I would look
+at the i2c driver in that package.  Indeed the i2c.c and other files
+there show significant new work.
+
+So, I imported this code from STM32duino.  This required some fiddling
+with include files, but after an hour or two of work I had a clean compile
+of the MPC4725 dac demo.  Will it work?
+
+It does not work now, it fails the sanity check at the start of the demo.
+Perhaps there are API changes in the new driver.
+
+---- While I was at it, I did some cleanup:
+
+got rid of unwired/unwired.h
+got rid of unwired/syscalls.c
+
+The latter was weird, giving _weak stubs for Unix IO calls.
+The one thing in that file worth preserving probably was sbrk(),
+at least looking at it and implementing something with similar semantics
+would have value for grabbing blocks of RAM after the initialized variables.
+
+Includes of stdint.h and stddef.h in unwired are commented out now.

@@ -29,7 +29,7 @@
  * STM32F1 implementations for basic GPIO functionality.
  */
 
-#include <unwired.h>
+// ? // #include <unwired.h>
 // #include <wirish/io.h>
 #include <io.h>
 
@@ -41,7 +41,8 @@
 
 void pinMode(uint8 pin, WiringPinMode mode) {
     gpio_pin_mode outputMode;
-    bool pwm = false;
+
+    int pwm = 0;
 
     if (pin >= BOARD_NR_GPIO_PINS) {
         return;
@@ -69,11 +70,11 @@ void pinMode(uint8 pin, WiringPinMode mode) {
         break;
     case PWM:
         outputMode = GPIO_AF_OUTPUT_PP;
-        pwm = true;
+        pwm = 1;
         break;
     case PWM_OPEN_DRAIN:
         outputMode = GPIO_AF_OUTPUT_OD;
-        pwm = true;
+        pwm = 1;
         break;
     default:
         ASSERT(0);

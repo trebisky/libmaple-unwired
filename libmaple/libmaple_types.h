@@ -42,6 +42,12 @@ typedef unsigned short uint16;
 typedef unsigned int uint32;
 typedef unsigned long long uint64;
 
+/* Added to import STM32duino code */
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef signed char int8_t;
+
 typedef signed char int8;
 typedef short int16;
 typedef int int32;
@@ -51,6 +57,8 @@ typedef void (*voidFuncPtr)(void);
 typedef void (*voidArgumentFuncPtr)(void *);
 
 #define __io volatile
+#define __IO volatile
+
 #define __attr_flash __attribute__((section (".USER_FLASH")))
 #define __packed __attribute__((__packed__))
 #define __deprecated __attribute__((__deprecated__))

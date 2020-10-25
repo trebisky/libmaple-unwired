@@ -31,7 +31,7 @@
 // #include <wirish/usb_serial.h>
 
 #include <string.h>
-#include <stdint.h>
+// #include <stdint.h>
 
 #include <libmaple/nvic.h>
 #include <libmaple/usb_cdcacm.h>
@@ -39,7 +39,10 @@
 // #include <libmaple/iwdg.h>
 
 // #include <wirish/wirish.h>
-#include "unwired.h"
+// #include "unwired.h"
+
+#include <libmaple/systick.h>
+#include "time.h"
 
 // static void rxHook(unsigned, void*);
 // static void ifaceSetupHook(unsigned, void*);

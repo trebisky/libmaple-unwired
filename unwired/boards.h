@@ -114,7 +114,7 @@ extern void boardInit(void);
  * @return true if the given pin is in boardUsedPins, and false otherwise.
  * @see boardUsedPins
  */
-bool boardUsesPin(uint8 pin);
+int boardUsesPin(uint8 pin);
 
 /*
  * Derived and default board definitions

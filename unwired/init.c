@@ -375,13 +375,13 @@ __weak void boardInit(void) {
 
 /* You could farm this out to the files in boards/ if e.g. it takes
  * too long to test on boards with lots of pins. */
-bool boardUsesPin(uint8 pin) {
+int boardUsesPin(uint8 pin) {
     for (int i = 0; i < BOARD_NR_USED_PINS; i++) {
         if (pin == boardUsedPins[i]) {
-            return true;
+            return 1;
         }
     }
-    return false;
+    return 0;
 }
 
 /*

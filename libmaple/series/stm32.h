@@ -160,6 +160,7 @@ extern "C" {
  */
 
 #if STM32_F1_LINE == STM32_F1_LINE_PERFORMANCE
+#    define F_CPU                           72000000U
 #    ifndef STM32_PCLK1
 #    define STM32_PCLK1                     36000000U
 #    endif

@@ -4,6 +4,8 @@ doxygen/html/
 main.cpp
 libmaple.layout
 libmaple/stm32f2-f4.tar
+ORIG
+libmaple/ORIG
 tags
 TAGS
 *~

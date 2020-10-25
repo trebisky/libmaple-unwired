@@ -29,7 +29,7 @@
  * Arduino-compatible digital I/O implementation.
  */
 
-#include <unwired.h>
+// #include <unwired.h>
 
 //#include <wirish/io.h>
 #include <io.h>
@@ -75,9 +75,9 @@ uint8 isButtonPressed(uint8 pin, uint32 pressedLevel) {
         delay(BUTTON_DEBOUNCE_DELAY);
         while (digitalRead(pin) == pressedLevel)
             ;
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
 uint8 waitForButtonPress(uint32 timeout) {
@@ -86,16 +86,16 @@ uint8 waitForButtonPress(uint32 timeout) {
     if (timeout == 0) {
         while (!isButtonPressed( BOARD_BUTTON_PIN, BOARD_BUTTON_PRESSED_LEVEL))
             ;
-        return true;
+        return 1;
     }
     do {
         time = millis();
         /* properly handle wrap-around */
         if ((start > time && time + (0xffffffffU - start) > timeout) ||
             time - start > timeout) {
-            return false;
+            return 0;
         }
     } while (!isButtonPressed( BOARD_BUTTON_PIN, BOARD_BUTTON_PRESSED_LEVEL));
     // } while (!isButtonPressed());
-    return true;
+    return 1;
 }

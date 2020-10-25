@@ -38,7 +38,7 @@ cSRCS_$(d) += i2c.c
 
 # These all used to be in the stm32f1 directory
 cSRCS_$(d) += usart_stm32f1.c
-cSRCS_$(d) += i2c_stm32f1.c
+cSRCS_$(d) += i2c_f1.c
 cSRCS_$(d) += adc_stm32f1.c
 cSRCS_$(d) += bkp_stm32f1.c
 cSRCS_$(d) += dma_stm32f1.c

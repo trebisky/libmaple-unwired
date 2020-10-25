@@ -195,9 +195,13 @@ help:
 	@echo ""
 
 # This is what we expect
-OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
+#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
 # Some newer chips are shipping with a idcode of 0x2ba01477, this will make them work.
-#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
+#  without this, you will see:
+# Warn : UNEXPECTED idcode: 0x2ba01477
+# Error: expected 1 of 1: 0x1ba01477
+#
+OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
 
 burn:	build/maple_mini.elf
 	openocd $(OCDCFG) -c "program build/maple_mini.elf verify reset exit"
