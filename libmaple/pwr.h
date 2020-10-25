@@ -37,7 +37,8 @@ extern "C" {
 #endif
 
 #include <libmaple/libmaple.h>
-#include <series/pwr.h>
+// #include <series/pwr.h>
+#include "pwr_f1.h"
 
 /** Power interface register map. */
 typedef struct pwr_reg_map {

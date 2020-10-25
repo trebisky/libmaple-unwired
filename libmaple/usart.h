@@ -43,7 +43,8 @@ extern "C"{
 #include <libmaple/rcc.h>
 #include <libmaple/nvic.h>
 #include <libmaple/ring_buffer.h>
-#include <series/usart.h>
+// #include <series/usart.h>
+#include "usart_f1.h"
 
 /*
  * Register map (common across supported STM32 series).

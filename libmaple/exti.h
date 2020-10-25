@@ -38,7 +38,8 @@
 extern "C"{
 #endif
 
-#include <series/exti.h>        /* provides EXTI_BASE */
+// #include <series/exti.h>        /* provides EXTI_BASE */
+#include "exti_f1.h"        /* provides EXTI_BASE */
 #include <libmaple/libmaple_types.h>
 
 /*

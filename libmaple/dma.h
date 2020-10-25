@@ -79,7 +79,9 @@ extern "C"{
  * - Normal stuff: dma_reg_map and base pointers, register bit
  *   definitions, dma_dev pointer declarations, and any other
  *   convenience functions useful for the series. */
-#include <series/dma.h>
+// #include <series/dma.h>
+#include "dma_f1.h"
+
 /* <libmaple/dma_common.h> buys us dma_dev and other necessities. */
 #include <libmaple/dma_common.h>
 #include <libmaple/libmaple_types.h>

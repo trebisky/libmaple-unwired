@@ -44,7 +44,8 @@ extern "C" {
 #include <libmaple/libmaple_types.h>
 #include <libmaple/rcc.h>
 #include <libmaple/nvic.h>
-#include <series/spi.h>
+// #include <series/spi.h>
+#include "spi_f1.h"
 
 /*
  * Register maps

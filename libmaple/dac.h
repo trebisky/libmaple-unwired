@@ -39,7 +39,8 @@
 extern "C"{
 #endif
 
-#include <series/dac.h>
+// #include <series/dac.h>
+#include "dac_f1.h"
 #include <libmaple/libmaple_types.h>
 #include <libmaple/rcc.h>
 #include <libmaple/stm32.h>

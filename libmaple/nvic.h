@@ -97,7 +97,8 @@ typedef struct nvic_reg_map {
  * place the include here to give the series header access to
  * NVIC_BASE, in order to let it do so).
  */
-#include <series/nvic.h>
+// #include <series/nvic.h>
+#include "nvic_f1.h"
 
 void nvic_init(uint32 address, uint32 offset);
 void nvic_set_vector_table(uint32 address, uint32 offset);

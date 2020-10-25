@@ -67,7 +67,8 @@ extern "C" {
  * - STM32_HAVE_USB: 1 if the MCU has a USB peripheral, and 0
  *   otherwise.
  */
-#include <series/stm32.h>
+// #include <series/stm32.h>
+#include "stm32_f1.h"
 
 /* FIXME: need an STM32_USART_MASK to parallel STM32_TIMER_MASK */
 

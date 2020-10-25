@@ -41,7 +41,8 @@ extern "C"{
  * Note: Series header must define:
  * - enum gpio_pin_mode (TODO think harder about portability here)
  */
-#include <series/gpio.h>
+// #include <series/gpio.h>
+#include "gpio_f1.h"
 #include <libmaple/libmaple_types.h>
 #include <libmaple/rcc.h>
 #include <libmaple/exti.h>

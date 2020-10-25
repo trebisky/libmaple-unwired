@@ -37,7 +37,8 @@
 extern "C"{
 #endif
 
-#include <series/timer.h>
+// #include <series/timer.h>
+#include "timer_f1.h"
 #include <libmaple/libmaple.h>
 #include <libmaple/rcc.h>
 #include <libmaple/nvic.h>
