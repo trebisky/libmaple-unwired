@@ -27,6 +27,7 @@
  *****************************************************************************/
 
 // tjt - I now call this init.c
+// originally in unwired
 
 /**
  * @file wirish/boards.cpp

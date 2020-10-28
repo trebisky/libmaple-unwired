@@ -29,11 +29,11 @@ UNWIRED_INCLUDES += -I$(TJT_PATH)/libmaple
 CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) $(UNWIRED_INCLUDES)
 
 # Local rules and targets
-sSRCS_$(d) := start.S
-cSRCS_$(d) := start_c.c
+#sSRCS_$(d) := start.S
+#cSRCS_$(d) := start_c.c
 
-cSRCS_$(d) += init.c
-cSRCS_$(d) += stm32f1_setup.c
+#cSRCS_$(d) += init.c
+#cSRCS_$(d) += stm32f1_setup.c
 cSRCS_$(d) += debug_f1.c
 cSRCS_$(d) += digital_f1.c
 cSRCS_$(d) += stm32f1_util_hooks.c

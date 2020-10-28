@@ -16,9 +16,13 @@ CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall -Werror
 sSRCS_$(d) := vector_table.S
 sSRCS_$(d) += isrs.S
 sSRCS_$(d) += exc.S
+sSRCS_$(d) += start.S
 
 # Local rules and targets
-cSRCS_$(d) := adc.c
+cSRCS_$(d) := start_c.c
+cSRCS_$(d) += init.c
+cSRCS_$(d) += setup_f1.c
+cSRCS_$(d) += adc.c
 cSRCS_$(d) += dac.c
 cSRCS_$(d) += dma.c
 cSRCS_$(d) += exti.c

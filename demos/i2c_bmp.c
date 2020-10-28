@@ -37,9 +37,12 @@ and the pressure at the airport, adjusted to sea level (as they
 post it) is currently 1012.0 mb, so these values seem just right.
 #endif
 
-#include <unwired.h>
+// #include <unwired.h>
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
+
+#include <serial.h>
+#include <time.h>
 
 /* totally bogus to simulate Kyu API,
  *  --- we will clean up later.
@@ -72,10 +75,12 @@ bmp_once ( struct i2c *ip )
 	int t, p;
 
 	t = bmp_temp ( ip );
-	p = bmp_pressure ( ip );
-	//os_printf ( "temp = %d\n", val );
-	//os_printf ( "pressure = %d\n", val );
-	//os_printf ( "raw T, P = %d  %d\n", t, p );
+	// p = bmp_pressure ( ip );
+	p = 0;
+
+	// printf ( "temp = %d\n", val );
+	// printf ( "pressure = %d\n", val );
+	printf ( "raw T, P = %d  %d\n", t, p );
 
 	convert ( t, p );
 }
@@ -131,7 +136,7 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-    i2c_master_enable ( I2C2, 0);
+    i2c_master_enable ( I2C2, 0, 100000 );
 
     printf ( "-- BOOTED -- off we go\n" );
 

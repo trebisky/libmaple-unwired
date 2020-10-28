@@ -71,6 +71,8 @@ typedef struct i2c_dev {
     struct i2c_reg_map *regs;   /**< Register map */
     struct i2c_msg *msg;        /**< Messages */
     uint32 error_flags;         /**< Error flags, set on I2C error condition */
+    uint32 error_sr1;           /**< tjt */
+    uint32 error_sr2;           /**< tjt */
     volatile uint32 timestamp;  /**< For internal use */
 
     /**

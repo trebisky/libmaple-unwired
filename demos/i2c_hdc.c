@@ -19,11 +19,29 @@
 
 /* This began as i2c code in the Kyu project.
  * Ported 10-12-2020 to libmaple-unwired.
+ *
+ * It works (it ran for 3401460 updates on 10-26-2020),
+ *  but only with a long delay (40 ms) between i2c send and recv.
+ * This doesn't seem right -- I need to look at the HCD1008 datasheet
+ * as well as the i2c documents and think about this.
+ *
+ * From the point of view of just getting T and H data, this is no big deal.
+ * Those parameters won't be changing at sub-second times in any environment
+ * I can imagine monitoring.
+ * If the 40 ms delay is done via busy waiting loops, then that does tie
+ *  up the processor in a significant way.
+ * This may not matter for many applications, but there is still something
+ *  amiss with the protocol that needs investigation.
  */
 
-#include <unwired.h>
+#define MONSTER_DELAY	40
+
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
+
+#include <serial.h>
+#include <delay.h>
+#include <time.h>
 
 /* Notes on the libmaple i2c API.
  * It is all about calls to i2c_master_xfer(dev,msgs,num,timeout)
@@ -55,9 +73,12 @@ hdc_test ( void )
 	ip = (struct i2c *) 0;
 
 	for ( ;; ) {
+	    // printf ( "************************* ***** ********************\n" );
+	    // printf ( "************************* WRITE ********************\n" );
 	    hdc_once ( ip, ++count );
-	    // delay ( 1000 );
-	    delay ( 20 );
+	    // delay ( 200 );
+	    // delay ( 20 );
+	    // spin ();
 	}
 
 	// hdc_once ( ip );
@@ -73,7 +94,8 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-    i2c_master_enable ( I2C2, 0);
+    i2c_master_enable ( I2C2, 0, 100000 );
+    // i2c_set_debug ( 99 );
 
     printf ( "-- BOOTED -- off we go\n" );
 
@@ -88,6 +110,19 @@ main(void)
 #define I2C_MSG_10BIT_ADDR      0x2
 #endif
 
+void
+i2c_trouble ( char *msg, int status )
+{
+	printf ( "Finished %s: returned: %d -- ", msg, status );
+	if ( status == I2C_ERROR_TIMEOUT )
+	    printf ( "Timeout\n" );
+	else if ( status == I2C_ERROR_PROTOCOL )
+	    printf ( "Protocol\n" );
+	else
+	    printf ( "Unknown error\n" );
+	printf ( "Trouble with i2c, spinning\n" );
+	spin ();
+}
 
 /* Also bogus for now.
  * once things are working, absorb this into lcd_write()
@@ -109,11 +144,8 @@ i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
 
     stat = i2c_master_xfer ( I2C2, &write_msg, 1, I2C_TIMEOUT);
     // printf ( "Finished i2c_send: returned: %d\n", stat );
-    if ( stat ) {
-	printf ( "Finished i2c_send: returned: %d\n", stat );
-	printf ( "Trouble with i2c, spinning\n" );
-	for ( ;; ) ;
-    }
+    if ( stat )
+	i2c_trouble ( "i2c_send", stat );
 }
 
 void
@@ -132,11 +164,8 @@ i2c_recv ( struct i2c *ip, int addr, unsigned char *buf, int count )
 
     stat = i2c_master_xfer ( I2C2, &read_msg, 1, I2C_TIMEOUT);
     // printf ( "Finished i2c_recv: returned: %d\n", stat );
-    if ( stat ) {
-	printf ( "Finished i2c_recv: returned: %d\n", stat );
-	printf ( "Trouble with i2c, spinning\n" );
-	for ( ;; ) ;
-    }
+    if ( stat )
+	i2c_trouble ( "i2c_recv", stat );
 }
 
 /* Code below here is almost unchanged from Kyu
@@ -303,12 +332,27 @@ hdc_read_both ( struct i2c *ip, unsigned int *buf )
 {
 	unsigned char bbuf[4];
 
+	// printf ( "begin read both\n" );
 	bbuf[0] = HDC_TEMP;
 	i2c_send ( ip, HDC_ADDR, bbuf, 1 );
 
-	delay_us ( CONV_BOTH );
+	// printf ( "MID read both\n" );
+	// delay ( 5 ); nope
+	// delay ( 10 ); nope
+	// delay ( 20 ); nope
+	// delay ( 25 ); nope
+	// delay ( 50 ); OK
+	// delay ( 40 ); OK
+	delay ( MONSTER_DELAY );
+
+	// Worked on the Orange Pi
+	// delay_us ( CONV_BOTH );
+
+	// XXX
+	// i2c_set_debug ( 99 );
 
 	i2c_recv ( ip, HDC_ADDR, bbuf, 4 );
+	// printf ( "end read both\n" );
 
 	buf[0] = bbuf[0] << 8 | bbuf[1];
 	buf[1] = bbuf[2] << 8 | bbuf[3];
@@ -348,7 +392,7 @@ hdc_once ( struct i2c *ip, int count )
 
 	// printf ( "HDC temp(F), humid = %d %d\n", tf, h );
 
-	// printf ( "HDC temp(F), humid = %d %d (count = %d)\n", tf, h, count );
+	printf ( "HDC temp(F), humid = %d %d (count = %d)\n", tf, h, count );
 }
 
 #ifdef notdef

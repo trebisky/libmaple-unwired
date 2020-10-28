@@ -24,6 +24,8 @@
  * SOFTWARE.
  *****************************************************************************/
 
+/* Originally in unwired ******* */
+
 /*
  * This file is a modified version of a file obtained from
  * CodeSourcery Inc. (now part of Mentor Graphics Corp.), in which the

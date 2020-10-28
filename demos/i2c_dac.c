@@ -281,6 +281,9 @@ setup ( void )
     printf ("Starting sawtooth wave\n");
 }
 
+/* At present this gives a sawtooth at about 32 Hz.
+ * Any printout will add delays and change that timing.
+ */
 void
 main(void)
 {

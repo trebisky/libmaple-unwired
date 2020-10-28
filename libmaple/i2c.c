@@ -40,6 +40,10 @@
  * 
  */
 
+/* Just a note, certain clone chips of the f1 have the following errata:
+ *  I2C peripheral won't allow CR1_ACK to be set in the same write that sets CR1_PE
+ */
+
 #include <libmaple/i2c_common.h>
 #include "i2c_private.h"
 
@@ -378,8 +382,26 @@ int32 i2c_master_xfer(i2c_dev *dev,
                       uint32 timeout) {
     int32 rc;
 
+#ifdef notdef
+    /* For debug */
+    volatile uint32_t ocr1;     // initial control register
+    volatile uint32_t osr1;     // read status register
+    volatile uint32_t osr2;                  // reserved for reading the SR2 register,
+
+    volatile uint32_t cr1;     // initial control register
+    volatile uint32_t sr1;     // read status register
+    volatile uint32_t sr2;                  // reserved for reading the SR2 register,
+#endif
+
     ASSERT(dev->state == I2C_STATE_IDLE);
 
+#ifdef notdef
+    ocr1 = dev->regs->CR1;     // initial control register
+    osr1 = dev->regs->SR1;     // read status register
+    osr2 = dev->regs->SR2;     // Clear ADDR bit
+#endif
+
+#ifdef notdef
     if ( i2c_debug ) {
 	printf ( "In i2c_master_xfer %h\n", dev );
 	printf ( " - i2c_master_xfer %d messages, timeout = %d\n", num, timeout );
@@ -387,6 +409,16 @@ int32 i2c_master_xfer(i2c_dev *dev,
 	/* Open up timeout when debugging since serial output adds delays */
 	timeout = 100;
     }
+#endif
+
+#ifdef notdef
+    cr1 = dev->regs->CR1;     // initial control register
+    sr1 = dev->regs->SR1;     // read status register
+    sr2 = dev->regs->SR2;     // Clear ADDR bit
+
+    printf ( "Orig cr1, sr1, sr2 = %h %h %h\n", ocr1, osr1, osr2 );
+    printf ( "Post cr1, sr1, sr2 = %h %h %h\n", cr1, sr1, sr2 );
+#endif
 
     /* check for silly call with no messages */
     if ( num < 1 )
@@ -421,11 +453,14 @@ int32 i2c_master_xfer(i2c_dev *dev,
     dev->regs->SR1 = 0;             // Reset error/status flags
 
     i2c_enable_irq(dev, I2C_IRQ_EVENT | I2C_IRQ_ERROR);
-    if ( i2c_debug )
-	printf ( "i2c - HW enabled and IRQ enabled\n" );
+    // if ( i2c_debug )
+	// printf ( "i2c - HW enabled and IRQ enabled\n" );
 
     /* Start -- this really starts the show */
     if (dev->msg[0].flags & I2C_MSG_READ) {
+	/* XXX some clones won't allow both PE and ACK to
+	 *  be set in the same write.
+	 */
         dev->regs->CR1 = I2C_CR1_PE | I2C_CR1_START | I2C_CR1_ACK;
     } else {
         dev->regs->CR1 = I2C_CR1_PE | I2C_CR1_START;
@@ -441,6 +476,8 @@ int32 i2c_master_xfer(i2c_dev *dev,
     i2c_disable_irq(dev, I2C_IRQ_BUFFER | I2C_IRQ_EVENT | I2C_IRQ_ERROR);
 
     if (rc != 0) {
+	printf ( "Error i2c sr1 = %h\n", dev->error_sr1 );
+	printf ( "Error i2c sr2 = %h\n", dev->error_sr2 );
         // If we had an error, make sure the device state reflects that
         // and make use of the smb I2C_SR1_TIMEOUT flag.  These have to be
         // done here after disabling the IRQ above to avoid a race-condition
@@ -474,8 +511,10 @@ int32 wait_for_state_change(i2c_dev *dev,
         // enable here -- a single disable and re-enable is fine:
         nvic_irq_disable(dev->ev_nvic_line);
         nvic_irq_disable(dev->er_nvic_line);
+
         devState = dev->state;
         devTimestamp = dev->timestamp;
+
         nvic_irq_enable(dev->er_nvic_line);
         nvic_irq_enable(dev->ev_nvic_line);
 
@@ -505,8 +544,8 @@ int32 wait_for_state_change(i2c_dev *dev,
  */
 void _i2c_irq_handler(i2c_dev *dev) {
 
-    if ( i2c_debug )
-	printf ( "i2c_irq_handler\n" );
+    // if ( i2c_debug )
+	// printf ( "i2c_irq_handler\n" );
 
     // See Note in ST Specs:
     //  Reading I2C_SR2 after reading I2C_SR1 clears the ADDR flag, even if the ADDR flag was
@@ -528,13 +567,13 @@ void _i2c_irq_handler(i2c_dev *dev) {
             if (curMsg->flags & I2C_MSG_READ) {         // read transaction:
                 if (sr1 & I2C_SR1_SB) {	    // start bit
                     // TODO : Add support for 10-bit address
-		    if ( i2c_debug )
-			printf ( "IRQ - (1) Send slave address: %h\n", curMsg->addr );
+		    // if ( i2c_debug )
+			// printf ( "IRQ - (1) Send slave address: %h\n", curMsg->addr );
                     i2c_send_slave_addr(dev, curMsg->addr, 1);
                 } else {
                     if (sr1 & I2C_SR1_ADDR) { // address sent
-			if ( i2c_debug )
-			    printf ( "IRQ - (2) addr was sent, todo: %d\n", todo );
+			// if ( i2c_debug )
+			    // printf ( "IRQ - (2) addr was sent, todo: %d\n", todo );
                         if (todo <= 1) {
                             dev->regs->CR1 = (cr1 &= ~I2C_CR1_ACK); // Disable ACK
                             sr2 = dev->regs->SR2;                   // Clear ADDR bit
@@ -553,8 +592,9 @@ void _i2c_irq_handler(i2c_dev *dev) {
                             bDone = 1;
                         }
                     } else {
-			if ( i2c_debug )
-			    printf ( "IRQ - (3) ..... todo: %d\n", todo );
+			// XXX
+			// if ( i2c_debug )
+			    // printf ( "IRQ - (3) ..... todo: %d\n", todo );
                         int8_t bFlgRXNE = ((sr1 & I2C_SR1_RXNE) != 0);
                         int8_t bFlgBTF = ((sr1 & I2C_SR1_BTF) != 0);
 
@@ -808,6 +848,10 @@ void _i2c_irq_error_handler(i2c_dev *dev) {
 	printf ( "i2c_irq_error_handler\n" );
 
     dev->timestamp = systick_uptime();      // Reset timeout counter
+
+    /* tjt */
+    dev->error_sr1 = sr1;
+    dev->error_sr2 = sr2;
 
     dev->error_flags = sr1 & (I2C_SR1_BERR |
                               I2C_SR1_ARLO |
