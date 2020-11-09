@@ -36,6 +36,8 @@
 #ifndef _BOARD_MAPLE_MINI_H_
 #define _BOARD_MAPLE_MINI_H_
 
+#define BOARD_MAPLE_MINI
+
 // defined in series/stm32.h
 // #define F_CPU			  72000000
 
