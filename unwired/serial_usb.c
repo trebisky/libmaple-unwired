@@ -43,9 +43,17 @@
 
 #include <libmaple/systick.h>
 #include "time.h"
+#include "serial.h"
 
-// static void rxHook(unsigned, void*);
-// static void ifaceSetupHook(unsigned, void*);
+#define BOOTLOADER_HOOKS
+
+/* defined on cc line via -D */
+// #define BOOTLOADER_maple
+
+#ifdef BOOTLOADER_HOOKS
+static void rxHook(unsigned, void*);
+static void ifaceSetupHook(unsigned, void*);
+#endif
 
 /* The routines in this file are never intended to be called directly,
  * so I don't provide public prototypes.
@@ -64,8 +72,10 @@ usb_serial_begin (void)
     // usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
     usb_cdcacm_enable ();
 
-    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
-    // usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+#ifdef BOOTLOADER_HOOKS
+    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
+    usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
+#endif
 }
 
 void
@@ -208,7 +218,7 @@ usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
  * Bootloader hook stuff
  */
 
-#ifdef BOOTLOADER_HOOK_RUBBISH
+#ifdef BOOTLOADER_HOOKS
 enum reset_state_t {
     DTR_UNSET,
     DTR_HIGH,
@@ -306,7 +316,8 @@ rxHook( unsigned hook, void *ignored )
 #if defined(BOOTLOADER_maple)
             // Got the magic sequence -> reset, presumably into the bootloader.
             // Return address is wait_reset, but we must set the thumb bit.
-            uintptr_t target = (uintptr_t)wait_reset | 0x1;
+            int target = (int)wait_reset | 0x1;
+
             asm volatile("mov r0, %[stack_top]      \n\t" // Reset stack
                          "mov sp, r0                \n\t"
                          "mov r0, #1                \n\t"
@@ -596,7 +607,7 @@ static void rxHook(unsigned hook, void *ignored) {
 #if defined(BOOTLOADER_maple)
             // Got the magic sequence -> reset, presumably into the bootloader.
             // Return address is wait_reset, but we must set the thumb bit.
-            uintptr_t target = (uintptr_t)wait_reset | 0x1;
+            int target = (int) wait_reset | 0x1;
             asm volatile("mov r0, %[stack_top]      \n\t" // Reset stack
                          "mov sp, r0                \n\t"
                          "mov r0, #1                \n\t"

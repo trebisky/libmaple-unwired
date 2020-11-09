@@ -37,7 +37,8 @@ BOARD_INCLUDE_DIR := $(MAKEDIR)/board-includes
 ##BOARD ?= maple
 ##MEMORY_TARGET ?= flash
 BOARD ?= maple_mini
-MEMORY_TARGET ?= jtag
+#MEMORY_TARGET ?= jtag
+MEMORY_TARGET ?= flash
 
 # Chooses the bootloader, available: maple and robotis
 BOOTLOADER ?= maple
@@ -72,6 +73,7 @@ include $(MAKEDIR)/build-templates.mk
 # The order of these is important.
 # someday include/unwired will go away.
 TARGET_FLAGS    += -I$(UNWIRED_PATH)
+TARGET_FLAGS    += -I$(UNWIRED_PATH)/$(BOARD)
 TARGET_FLAGS    += -I$(TJT_PATH)
 TARGET_FLAGS    += -I$(LIBMAPLE_PATH)/include/libmaple
 TARGET_FLAGS    += -I$(UNWIRED_PATH)/include/unwired
@@ -136,6 +138,9 @@ UPLOAD_flash := $(SUPPORT_PATH)/scripts/reset.py && \
                 sleep 1                  && \
                 $(DFU) -a1 -d $(BOARD_USB_VENDOR_ID):$(BOARD_USB_PRODUCT_ID) -D $(BUILD_PATH)/$(BOARD).bin -R
 endif
+
+dfu:
+	$(DFU) -a1 -d $(BOARD_USB_VENDOR_ID):$(BOARD_USB_PRODUCT_ID) -D $(BUILD_PATH)/$(BOARD).bin -R
 
 ifeq ($(BOOTLOADER),robotis)
 UPLOAD_flash := $(SUPPORT_PATH)/scripts/robotis-loader.py $(ROBOTIS_PORT) $(BUILD_PATH)/$(BOARD).bin

@@ -20,9 +20,11 @@ BUILDDIRS += $(BUILD_PATH)/$(d)/$(TARGET_SERIES_MODULE)
 #UNWIRED_INCLUDES := -I$(d)/include
 
 # gives access to include files in this very directory
-UNWIRED_INCLUDES := -I$(d)
+# Also sets up the appropriate BOARD directory to find board.h
+UNWIRED_INCLUDES := -I$(d) -I$(d)/$(BOARD)
+
 # gives access to "series" in its new location
-UNWIRED_INCLUDES += -I$(TJT_PATH)/libmaple
+###UNWIRED_INCLUDES += -I$(TJT_PATH)/libmaple
 
 # Local flags. Add -I$(d) to allow for private includes.
 #CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) $(WIRISH_INCLUDES) -I$(d)

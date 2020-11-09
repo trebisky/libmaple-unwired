@@ -6,6 +6,7 @@ libmaple.layout
 libmaple/stm32f2-f4.tar
 ORIG
 libmaple/ORIG
+libmaple/zzz
 tags
 TAGS
 *~

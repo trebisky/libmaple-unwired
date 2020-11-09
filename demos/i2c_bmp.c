@@ -75,6 +75,7 @@ bmp_once ( struct i2c *ip )
 	int t, p;
 
 	t = bmp_temp ( ip );
+	// t = 0;
 	// p = bmp_pressure ( ip );
 	p = 0;
 
