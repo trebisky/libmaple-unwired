@@ -1,0 +1,25 @@
+#!/bin/ruby
+
+files = %w(
+adc_stm32f1.c
+bkp_stm32f1.c
+dma_stm32f1.c
+exti_stm32f1.c
+fsmc_stm32f1.c
+gpio_stm32f1.c
+rcc_stm32f1.c
+spi_stm32f1.c
+timer_stm32f1.c
+usart_stm32f1.c
+)
+
+def fix ( ff )
+  fn = ff.sub /stm32f1/, "f1"
+  cmd = "mv #{ff} #{fn}"
+  puts cmd
+  system cmd
+end
+
+files.each { |f|
+    fix f
+}

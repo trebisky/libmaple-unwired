@@ -50,17 +50,17 @@ cSRCS_$(d) += util_hooks_f1.c
 cSRCS_$(d) += debug_f1.c
 
 # These all used to be in the stm32f1 directory
-cSRCS_$(d) += usart_stm32f1.c
+cSRCS_$(d) += usart_f1.c
 cSRCS_$(d) += i2c_f1.c
-cSRCS_$(d) += adc_stm32f1.c
-cSRCS_$(d) += bkp_stm32f1.c
-cSRCS_$(d) += dma_stm32f1.c
-cSRCS_$(d) += exti_stm32f1.c
-cSRCS_$(d) += fsmc_stm32f1.c
-cSRCS_$(d) += gpio_stm32f1.c
-cSRCS_$(d) += rcc_stm32f1.c
-cSRCS_$(d) += spi_stm32f1.c
-cSRCS_$(d) += timer_stm32f1.c
+cSRCS_$(d) += adc_f1.c
+cSRCS_$(d) += bkp_f1.c
+cSRCS_$(d) += dma_f1.c
+cSRCS_$(d) += exti_f1.c
+cSRCS_$(d) += fsmc_f1.c
+cSRCS_$(d) += gpio_f1.c
+cSRCS_$(d) += rcc_f1.c
+cSRCS_$(d) += spi_f1.c
+cSRCS_$(d) += timer_f1.c
 
 ## I2C support must be ported to F2:
 #ifeq ($(MCU_SERIES),stm32f1)
