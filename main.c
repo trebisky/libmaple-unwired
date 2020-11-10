@@ -11,23 +11,29 @@
 #include <io.h>
 #include <time.h>
 
-// #define	BLINK_PIN	BOARD_LED_PIN
-
-// This is PA5 on the Maple
-// See: wired/wirish_ORIG/boards/maple/include/board/board.h
-// #define	BLINK_PIN	33
-#define	BLINK_PIN	13
-
-// This still does not work ...
+// writing 1 turns the LED on.
 
 void
 main ( void )
 {
-	pinMode(BLINK_PIN, OUTPUT);
+	pinMode(BOARD_LED_PIN, OUTPUT);
 
 	for ( ;; ) {
-	    togglePin(BLINK_PIN);
+	    // togglePin(BOARD_LED_PIN);
+	    digitalWrite ( BOARD_LED_PIN, 0 );
+	    delay ( 999 );
+
+	    digitalWrite ( BOARD_LED_PIN, 1 );
 	    delay ( 100 );
+	    digitalWrite ( BOARD_LED_PIN, 0 );
+	    delay ( 200 );
+	    digitalWrite ( BOARD_LED_PIN, 1 );
+	    delay ( 100 );
+	    digitalWrite ( BOARD_LED_PIN, 0 );
+
+	    delay ( 999 );
+	    digitalWrite ( BOARD_LED_PIN, 1 );
+	    delay ( 999 );
 	}
 }
 
