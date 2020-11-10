@@ -45,9 +45,8 @@
 #define SYSTICK_RELOAD_VAL        71999 /* takes a cycle to reload */
 
 #define BOARD_BUTTON_PIN          32
-// TJT
-// #define BOARD_LED_PIN             33
-#define BOARD_LED_PIN             14
+
+#define BOARD_LED_PIN             33
 
 #define BOARD_NR_USARTS           3
 #define BOARD_USART1_TX_PIN       26
