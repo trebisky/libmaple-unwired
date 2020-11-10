@@ -442,7 +442,6 @@ serial_printf ( int fd, char *fmt, ... )
 {
 	char buf[PRINTF_BUF_SIZE];
         va_list args;
-        int rv;
 
         va_start ( args, fmt );
         asnprintf ( buf, PRINTF_BUF_SIZE, fmt, args );

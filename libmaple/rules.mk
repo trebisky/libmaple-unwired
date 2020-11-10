@@ -11,7 +11,9 @@ LIBMAPLE_INCLUDES += -I$(LIBMAPLE_PATH)
 LIBMAPLE_PRIVATE_INCLUDES := -I$(LIBMAPLE_PATH)
 
 # Local flags
-CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall -Werror
+#CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall -Werror
+#CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES) -Wall
+CFLAGS_$(d) = $(LIBMAPLE_PRIVATE_INCLUDES) $(LIBMAPLE_INCLUDES)
 
 sSRCS_$(d) := vector_table.S
 sSRCS_$(d) += isrs.S
@@ -39,6 +41,8 @@ cSRCS_$(d) += usart.c
 cSRCS_$(d) += usart_private.c
 cSRCS_$(d) += util.c
 cSRCS_$(d) += i2c.c
+cSRCS_$(d) += serial.c
+cSRCS_$(d) += serial_usb.c
 
 # These all used to be in the stm32f1 directory
 cSRCS_$(d) += usart_stm32f1.c
