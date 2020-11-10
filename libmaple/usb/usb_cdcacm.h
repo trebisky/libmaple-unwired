@@ -36,7 +36,8 @@
 
 #include <libmaple/libmaple_types.h>
 #include <libmaple/gpio.h>
-#include <libmaple/usb.h>
+
+#include <usb/usb.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,9 +119,12 @@ extern "C" {
  */
 
 /* tjt */
+void usb_cdcacm_enable ( void );
+void usb_cdcacm_disable ( void );
+
 // void usb_cdcacm_enable(gpio_dev*, uint8);
 // void usb_cdcacm_disable(gpio_dev*, uint8);
-void usb_cdcacm_enable ( void );
+
 void usb_cdcacm_wait ( void );
 int usb_check ( void );
 

@@ -266,7 +266,7 @@ init ( void )
     printf ( "USB serial begin has returned\n" );
 
     /* This simply calls afio_init().
-     * And all that does it to gate on the AFIO clock
+     * And all that does is to gate on the AFIO clock
      * and reset AFIO.
      */
     series_init ();

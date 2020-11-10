@@ -33,9 +33,9 @@
  * the result made cleaner.
  */
 
-#include <libmaple/usb_cdcacm.h>
+#include <usb/usb_cdcacm.h>
+#include <usb/usb.h>
 
-#include <libmaple/usb.h>
 #include <libmaple/nvic.h>
 #include <libmaple/delay.h>
 
@@ -371,17 +371,28 @@ void usb_cdcacm_set_hooks(unsigned hook_flags, void (*hook)(unsigned, void*)) {
  * CDC ACM interface
  */
 
-/* The blue pill has no disconnect circuit,
- * so we don't monkey with the gpio pin needlessly
- * tjt 10-10-2020
- * Also the xxxx_disable() routine never gets called,
- * so the heck with it.
- */
+// void usb_cdcacm_enable(gpio_dev *disc_dev, uint8 disc_bit)
 void
 usb_cdcacm_enable ( void )
 {
+#ifdef notdef
+    /* moved up into usb_serial.c */
+    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(disc_dev, disc_bit, 0);
+#endif
+
     /* Initialize the USB peripheral. */
     usb_init_usblib(USBLIB, ep_int_in, ep_int_out);
+}
+
+// void usb_cdcacm_disable(gpio_dev *disc_dev, uint8 disc_bit)
+void
+usb_cdcacm_disable ( void )
+{
+    /* Turn off the interrupt and signal disconnect (see e.g. USB 2.0
+     * spec, section 7.1.7.3). */
+    nvic_irq_disable(NVIC_USB_LP_CAN_RX0);
+    // gpio_write_bit(disc_dev, disc_bit, 1);
 }
 
 int
@@ -431,26 +442,6 @@ static inline uint8 usb_is_connected(usblib_dev *dev) {
 
 static inline uint8 usb_is_configured(usblib_dev *dev) {
     return dev->state == USB_CONFIGURED;
-}
-#endif
-
-#ifdef notdef
-void usb_cdcacm_enable(gpio_dev *disc_dev, uint8 disc_bit) {
-    /* Present ourselves to the host. Writing 0 to "disc" pin must
-     * pull USB_DP pin up while leaving USB_DM pulled down by the
-     * transceiver. See USB 2.0 spec, section 7.1.7.3. */
-    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(disc_dev, disc_bit, 0);
-
-    /* Initialize the USB peripheral. */
-    usb_init_usblib(USBLIB, ep_int_in, ep_int_out);
-}
-
-void usb_cdcacm_disable(gpio_dev *disc_dev, uint8 disc_bit) {
-    /* Turn off the interrupt and signal disconnect (see e.g. USB 2.0
-     * spec, section 7.1.7.3). */
-    nvic_irq_disable(NVIC_USB_LP_CAN_RX0);
-    gpio_write_bit(disc_dev, disc_bit, 1);
 }
 #endif
 

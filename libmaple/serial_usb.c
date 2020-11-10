@@ -34,8 +34,8 @@
 // #include <stdint.h>
 
 #include <libmaple/nvic.h>
-#include <libmaple/usb_cdcacm.h>
-#include <libmaple/usb.h>
+#include <usb/usb_cdcacm.h>
+#include <usb/usb.h>
 // #include <libmaple/iwdg.h>
 
 // #include <wirish/wirish.h>
@@ -45,15 +45,21 @@
 #include "time.h"
 #include "serial.h"
 
-#define BOOTLOADER_HOOKS
-
-/* defined on cc line via -D */
-// #define BOOTLOADER_maple
-
-#ifdef BOOTLOADER_HOOKS
+#ifndef BOARD_BLUE_PILL
 static void rxHook(unsigned, void*);
 static void ifaceSetupHook(unsigned, void*);
 #endif
+
+/* Moved here from usb/usb_cdcacm.c */
+static void
+usb_serial_disconnect ( gpio_dev *disc_dev, uint8 disc_bit )
+{
+    /* Present ourselves to the host. Writing 0 to "disc" pin must
+     * pull USB_DP pin up while leaving USB_DM pulled down by the
+     * transceiver. See USB 2.0 spec, section 7.1.7.3. */
+    gpio_set_mode(disc_dev, disc_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(disc_dev, disc_bit, 0);
+}
 
 /* The routines in this file are never intended to be called directly,
  * so I don't provide public prototypes.
@@ -61,21 +67,44 @@ static void ifaceSetupHook(unsigned, void*);
  * tjt
  */
 
-/* tjt - as near as I can tell, this whole hook business
- * was all about boot loaders that I neither have, know
- * about, nor intend to use.
+/* True maple boards have a USB disconnect circuit
+ * ( a couple of transistors) controlled by a GPIO pin.
+ * This allows software to perform a USB disconnect whe
+ * it starts up, causing the host system to take a fresh
+ * look at the USB device.
+ * The maple does this because when it is running the Maple
+ * DFU boot loader, it runs the loader after reset for
+ * couple of seconds, then when the application starts
+ * (this code), it wants to act like an ACM serial device,
+ * not a DFU loader.
+ * The hooks and the DISC bit are all about this loader scheme.
  */
+
 void
 usb_serial_begin (void)
 {
     // printf ( "USB usb_serial_begin\n" );
-    // usb_cdcacm_enable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
+#ifndef BOARD_BLUE_PILL
+    usb_serial_disconnect ( BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT );
+#endif
+    // usb_cdcacm_enable ( BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT );
     usb_cdcacm_enable ();
 
-#ifdef BOOTLOADER_HOOKS
+#ifndef BOARD_BLUE_PILL
     usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX, rxHook);
     usb_cdcacm_set_hooks(USB_CDCACM_HOOK_IFACE_SETUP, ifaceSetupHook);
 #endif
+}
+
+void
+usb_serial_end ( void )
+{
+    // usb_cdcacm_disable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
+    usb_cdcacm_disable ();
+#ifndef BOARD_BLUE_PILL
+    gpio_write_bit ( BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT, 1 );
+#endif
+    usb_cdcacm_remove_hooks(USB_CDCACM_HOOK_RX | USB_CDCACM_HOOK_IFACE_SETUP);
 }
 
 void
@@ -218,7 +247,7 @@ usb_disc_disable(gpio_dev *disc_dev, uint8 disc_bit)
  * Bootloader hook stuff
  */
 
-#ifdef BOOTLOADER_HOOKS
+#ifndef BOARD_BLUE_PILL
 enum reset_state_t {
     DTR_UNSET,
     DTR_HIGH,
@@ -237,6 +266,9 @@ static void ifaceSetupHook ( unsigned hook, void *requestvp )
     if (request != USB_CDCACM_SET_CONTROL_LINE_STATE) {
         return;
     }
+
+/* defined on cc line via -D */
+// #define BOOTLOADER_maple
 
 #if defined(BOOTLOADER_maple)
     // We need to see a negative edge on DTR before we start looking

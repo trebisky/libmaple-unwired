@@ -45,7 +45,6 @@
 #include <libmaple/timer.h>
 #include <libmaple/usart.h>
 
-void usb_serial_begin ( void );
 void usb_serial_wait ( void );
 void usb_serial_wait_t ( int );
 char usb_serial_getc ( void );
