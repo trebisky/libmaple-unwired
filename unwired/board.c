@@ -224,7 +224,8 @@ const uint8 boardUsedPins[] __FLASH__ = {
 /* ====================================================================== */
 /* ====================================================================== */
 
-#ifdef BOARD_MAPLE_MINI
+// #ifdef BOARD_MAPLE_MINI
+#if defined(BOARD_MAPLE_MINI) || defined(BOARD_BLUE_PILL)
 stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
 
     /* Top header */
