@@ -44,6 +44,10 @@ cSRCS_$(d) += i2c.c
 cSRCS_$(d) += serial.c
 cSRCS_$(d) += serial_usb.c
 cSRCS_$(d) += time.c
+cSRCS_$(d) += digital.c
+cSRCS_$(d) += digital_f1.c
+cSRCS_$(d) += util_hooks_f1.c
+cSRCS_$(d) += debug_f1.c
 
 # These all used to be in the stm32f1 directory
 cSRCS_$(d) += usart_stm32f1.c

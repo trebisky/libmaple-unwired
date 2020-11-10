@@ -36,13 +36,13 @@ CFLAGS_$(d) := $(LIBMAPLE_INCLUDES) $(UNWIRED_INCLUDES)
 
 #cSRCS_$(d) += init.c
 #cSRCS_$(d) += stm32f1_setup.c
-cSRCS_$(d) += debug_f1.c
-cSRCS_$(d) += digital_f1.c
-cSRCS_$(d) += stm32f1_util_hooks.c
+#cSRCS_$(d) += debug_f1.c
+#cSRCS_$(d) += digital_f1.c
+#cSRCS_$(d) += stm32f1_util_hooks.c
 #cSRCS_$(d) += syscalls.c
 cSRCS_$(d) += board.c
 #cSRCS_$(d) += time.c
-cSRCS_$(d) += digital.c
+#cSRCS_$(d) += digital.c
 #cSRCS_$(d) += serial.c
 #cSRCS_$(d) += serial_usb.c
 
