@@ -43,15 +43,15 @@ BOARD_INCLUDE_DIR := $(MAKEDIR)/board-includes
 
 # Tom says for my maple boards, I use the Maple DFU loader and USB
 # so I want a flash build.
-#BOARD ?= maple
-#MEMORY_TARGET ?= flash
+BOARD ?= maple
+MEMORY_TARGET ?= flash
 
 #  But for my blue pills, I use my STLink and so I want a jtag build.
 #  tjt - to add the blue pill target, I also needed to copy the
 #  maple_mini.mk file to this:
 #     support/make/board-includes/blue_pill.mk
-BOARD ?= blue_pill
-MEMORY_TARGET ?= jtag
+#BOARD ?= blue_pill
+#MEMORY_TARGET ?= jtag
 
 # Chooses the bootloader, available: maple and robotis
 BOOTLOADER ?= maple

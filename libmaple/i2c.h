@@ -54,9 +54,28 @@
 #ifndef _LIBMAPLE_I2C_H_
 #define _LIBMAPLE_I2C_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* The following is from Kyu.  11-14-2020 Tom Trebisky
+*
+ * I have introduced my "iic.c" bit bang GPIO driver and
+ * would like to integrate it along with the buggy as hell i2c hardware
+ * driver -- in case I ever manage to make it work.
+ * If nothing else having the two unified makes
+ *  moving code around a lot easier.
+ */
+
+#define I2C_HW          1
+#define I2C_GPIO        2
+
+struct i2c {
+        int type;
+        void *hw;
+};
+
+struct i2c *i2c_hw_new ( int );
+struct i2c *i2c_gpio_new ( int, int );
+
+int i2c_send ( struct i2c *, int, char *, int );
+int i2c_recv ( struct i2c *, int, char *, int );
 
 /*
  * Series header must provide:

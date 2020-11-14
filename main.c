@@ -34,9 +34,31 @@
 
 // #include <wirish/wirish.h>
 // #include <unwired.h>
-#include <serial.h>
 
+/* Orange Pi sees this from the MCP4725:
+ * DAC status = 18
+ * DAC val = c0 0d
+ * DAC ee = 40 b8
+ */
+
+#include <string.h>
+
+#include <serial.h>
+#include <time.h>
+#include <boards.h>
+#include <i2c.h>
+
+/* Use bing-bang iic driver */
+#define USE_IIC
+
+#ifdef USE_IIC
 #include <libmaple/i2c.h>
+void iic_init ( int, int );
+void iic_recv ( int, char *, int );
+void iic_send ( int, char *, int );
+#else
+#include <libmaple/i2c.h>
+#endif
 
 #define MCP_ADDR         0x60
 
@@ -76,6 +98,7 @@ mcp_i2c_setup (void)
 
 /* This sends 3 bytes */
 
+/* OLD */
 void
 mcp_write_val
 (uint16 val)
@@ -92,6 +115,7 @@ mcp_write_val
     // printf ( "MCP write val Xfer returns: %d\n", st );
 }
 
+/* OLD */
 void
 mcp_dump ( char *msg, uint8 buf[], int n )
 {
@@ -109,7 +133,9 @@ mcp_dump ( char *msg, uint8 buf[], int n )
  *  2) DAC data (low 4)
  *  3) EEprom data (high 4)
  *  4) EEprom data (low 8)
+
  */
+/* OLD */
 uint16
 mcp_read_val( void )
 {
@@ -134,6 +160,7 @@ mcp_i2c_setup (void)
 
 /* This sends 3 bytes */
 
+#ifndef USE_IIC
 void
 mcp_write_val
 (uint16 val)
@@ -155,6 +182,7 @@ mcp_write_val
     st = i2c_master_xfer(I2C2, &write_msg, 1, 0);
     // printf ( "MCP write val Xfer returns: %d\n", st );
 }
+#endif
 
 void
 mcp_dump ( char *msg, uint8 buf[], int n )
@@ -174,6 +202,8 @@ mcp_dump ( char *msg, uint8 buf[], int n )
  *  3) EEprom data (high 4)
  *  4) EEprom data (low 8)
  */
+
+#ifndef USE_IIC
 uint16
 mcp_read_val( void )
 {
@@ -195,6 +225,45 @@ mcp_read_val( void )
     tmp += (read_msg_data[2] >> 4);
     return tmp;
 }
+#endif
+
+#ifdef USE_IIC
+
+struct i2c *xp;
+
+int
+mcp_read_val( void )
+{
+    int tmp = 0;
+    char io_buf[5];
+
+    i2c_recv ( xp, MCP_ADDR, io_buf, 5 );
+
+    // mcp_dump ( "MCP read", io_buf, 5 );
+
+    /* We don't care about the status and EEPROM bytes (0, 3, and 4). */
+    tmp = (io_buf[1] << 4);
+    tmp += (io_buf[2] >> 4);
+    return tmp;
+}
+void
+mcp_write_val ( int val )
+{
+    unsigned char io_buf[2];
+
+    io_buf[0] = (val >> 8) & 0xf;
+    io_buf[1] = val & 0xff;
+
+    i2c_send ( xp, MCP_ADDR, io_buf, 2 );
+
+    // write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
+    // write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
+    // uint16 tmp = val >> 4;
+    // write_msg_data[1] = tmp;
+    // tmp = (val << 4) & 0x00FF;
+    // write_msg_data[2] = tmp;
+}
+#endif
 
 /* This is a 12 bit dac, so we can write at most 0x3ff
  */
@@ -253,13 +322,39 @@ mcp_test ( void )
     return 1;
 }
 
+#ifdef USE_IIC
+
+/* From kyu orange_pi/i2c_dac.c */
+static void
+dac_read ( struct i2c *ip, unsigned char *buf, int n )
+{
+        iic_recv ( MCP_ADDR, buf, n );
+}
+
+static void
+dac_show ( struct i2c *ip )
+{
+        unsigned char io[5];
+
+	memset ( io, 0, 5 );
+        dac_read ( ip, io, 5 );
+
+        printf ( "DAC status = %x\n", io[0] );
+        printf ( "DAC val = %x %x\n", io[1], io[2] );
+        printf ( "DAC ee = %x %x\n", io[3], io[4] );
+}
+#endif
+
 void
 setup ( void )
 {
     int fd;
+    int i;
+
 
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
+
     printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
     printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
     printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
@@ -267,11 +362,25 @@ setup ( void )
     printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
     printf ( "Ready to go\n" );
 
+#ifdef USE_IIC
+    /* sda, scl */
+    // iic_init ( D30, D29 );
+    xp = i2c_gpio_new ( D30, D29 );
+    if ( ! xp ) {
+	printf ( "Cannot set up GPIO iic\n" );
+	spin ();
+    }
+
+    for ( i=0; i<4; i++ ) {
+	dac_show ( xp );
+	delay ( 500 );
+    }
+#else
     // API change when we adopted the STM32duino i2c driver.
     // i2c_master_enable(I2C2, 0);
     i2c_master_enable ( I2C2, 0, 100000 );
-
     // i2c_set_debug ( 1 );
+#endif
 
     mcp_i2c_setup();
 

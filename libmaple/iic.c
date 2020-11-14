@@ -25,9 +25,9 @@
  *  low level code derived from i2c_master.c
  *
  * There are 3 functions in the API:
- *    void iic_init ( int, int );
- *    int iic_send ( int, unsigned char *, int );
- *    int iic_recv ( int, unsigned char *, int );
+ *    void iic_init ( sda_pin, sclk_pin );
+ *    int iic_send ( addr, unsigned char *, int );
+ *    int iic_recv ( addr, unsigned char *, int );
  */
 // #include <kyu.h>
 
