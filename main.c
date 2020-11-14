@@ -1,413 +1,378 @@
-// hacked for "unwired" setup.  10-10-2020
-// And it "just worked" the first time.
-// That almost never happens.
-//
-// On 10-21-2020 I ran it overnight with no problems,
-// OK - wait for 3 -> 2 (0) 11357820
-// over 11 million transactions.
-// Note that hitting the reset button at the right
-// moment leaves the i2c bus hung with no recovery
-// other than removing power.
-//
-// i2c-mcp4725-dac.cpp
-//
-// Written by Andrew Meyer <ajm@leaflabs.com>
-// Modified by Marti Bolivar <mbolivar@leaflabs.com>
-//
-// Simple program showing how to control an MCP4725 DAC using the
-// libmaple I2C interface. There's an MCP4725 breakout board available
-// on SparkFun:
-//
-// http://www.sparkfun.com/products/8736
-//
-// How to use:
-//
-// 1. Connect the DAC SDA and SCL pins to I2C2, with a pullup
-//    resistor (1 KOhm should work) to VCC.
-// 2. Load the sketch and connect to SerialUSB.
-//	(I use Serial1)
-// 3. Press the button.
-//	(forget it, we ain't got no button)
-//
-// The program then makes sure the DAC is connected properly (during
-// setup()), then has the DAC output a sawtooth wave (with loop()).
-
-// #include <wirish/wirish.h>
-// #include <unwired.h>
-
-/* Orange Pi sees this from the MCP4725:
- * DAC status = 18
- * DAC val = c0 0d
- * DAC ee = 40 b8
+/* This is i2c_lcd.c from Tom's kyu/orange_pi collection
+ * It is a driver for the extremely common 16x2 monochrome
+ * LCD module, with the i2c piggyback board.
+ * 
+ * Copyright (C) 2020  Tom Trebisky  <tom@mmto.org>
+ * Tom Trebisky  10-11-2020
+ *
+ * Work began to get this to run with libmaple-unwired 10-11-2020
  */
 
-#include <string.h>
+/* This is a driver for a 16x2 LCD display
+ * The ones I have use a PCF8574 i2c chip.
+ * The display itself is based on a Hitachi HD44780.
+ * These gadgets are cheap, simple, and well known.
+ *
+ * It seems that you MUST run this from 5 volts and use a level shifter.
+ * This isn't quite true.  The display itself will work from 3.3 volts,
+ *  but is very faint (and you probably will have to adjust the trimpot
+ *  to even see it).  The logic works fine at 3.3 volts,
+ *  but to see the display, it really wants 5 volts.
+ */
 
-#include <serial.h>
-#include <time.h>
-#include <boards.h>
+// Comment this out to use this as a library
+// #define RUN_AS_DEMO
+
+#include <unwired.h>
 #include <i2c.h>
 
-/* Use bing-bang iic driver */
-#define USE_IIC
+/* The idea here is that if we don't define this,
+ * we can use this as part of a bigger project.
+ */
+#define RUN_AS_DEMO
 
-#ifdef USE_IIC
-#include <libmaple/i2c.h>
-void iic_init ( int, int );
-void iic_recv ( int, char *, int );
-void iic_send ( int, char *, int );
-#else
-#include <libmaple/i2c.h>
-#endif
+/* On 11-14-2020 I switched to using the bit-bang driver
+ * and adopted my Kyu-like i2c API in an "official" way.
+ */
 
-#define MCP_ADDR         0x60
+/* No reason this shouldn't be global */
+static struct i2c *ip;
 
-#define MCP_WRITE_DAC    0b01000000
-#define MCP_WRITE_EEPROM 0b01100000
-#define MCP_PD_NORMAL    0b00000000
-#define MCP_PD_1K        0b00000010
-#define MCP_PD_100K      0b00000100
-#define MCP_PD_500K      0b00000110
+void lcd_init ( struct i2c *ip );
+void lcd_begin ( void );
+void lcd_msg ( struct i2c *ip, char *msg );
+void lcd_msg2 ( struct i2c *ip, char *msg );
 
-static uint8 write_msg_data[3];
-static i2c_msg write_msg;
-
-static uint8 read_msg_data[5];
-static i2c_msg read_msg;
-
+void
+lcd_begin ( void )
+{
 #ifdef notdef
-/*
- * DAC control routines
- */
+	/* Very important */
+	i2c_master_enable ( I2C2, 0);
+#endif
+	printf ( " ---- Booted\n" );
 
-void 
-mcp_i2c_setup (void)
-{
-    write_msg.addr = MCP_ADDR;
-    write_msg.flags = 0; // write, 7 bit address
-    write_msg.length = sizeof(write_msg_data);
-    write_msg.xferred = 0;
-    write_msg.data = write_msg_data;
-
-    read_msg.addr = MCP_ADDR;
-    read_msg.flags = I2C_MSG_READ;
-    read_msg.length = sizeof(read_msg_data);
-    read_msg.xferred = 0;
-    read_msg.data = read_msg_data;
-}
-
-/* This sends 3 bytes */
-
-/* OLD */
-void
-mcp_write_val
-(uint16 val)
-{
-    int st;
-
-    write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
-    uint16 tmp = val >> 4;
-    write_msg_data[1] = tmp;
-    tmp = (val << 4) & 0x00FF;
-    write_msg_data[2] = tmp;
-
-    st = i2c_master_xfer(I2C2, &write_msg, 1, 0);
-    // printf ( "MCP write val Xfer returns: %d\n", st );
-}
-
-/* OLD */
-void
-mcp_dump ( char *msg, uint8 buf[], int n )
-{
-	int i;
-
-	for ( i=0; i<n; i++ ) {
-	    printf ( "%s %d = %h\n", msg, i, buf[i] );
+	/* D30 is sda, D29 is sclk */
+	ip = i2c_gpio_new ( D30, D29 );
+	if ( ! ip ) {
+	    printf ( "Cannot set up GPIO iic\n" );
+	    spin ();
 	}
+
+	printf ( "Start init sequence\n" );
+
+	lcd_init ( ip );
+
+	printf ( "Finished init sequence\n" );
 }
 
-/* The read sends one byte (the 0x60 address with the 1 bit set
- *  to indicate a read.  The device responds with 5 bytes:
- *  0) status
- *  1) DAC data (high 8)
- *  2) DAC data (low 4)
- *  3) EEprom data (high 4)
- *  4) EEprom data (low 8)
-
- */
-/* OLD */
-uint16
-mcp_read_val( void )
-{
-    uint16 tmp = 0;
-    int st;
-
-    st = i2c_master_xfer(I2C2, &read_msg, 1, 2);
-    // printf ( "MCP read val Xfer returns: %d\n", st );
-    // mcp_dump ( "MCP read",read_msg_data, 5 );
-
-    /* We don't care about the status and EEPROM bytes (0, 3, and 4). */
-    tmp = (read_msg_data[1] << 4);
-    tmp += (read_msg_data[2] >> 4);
-    return tmp;
-}
-#endif
-
-void 
-mcp_i2c_setup (void)
-{
-}
-
-/* This sends 3 bytes */
-
-#ifndef USE_IIC
+#ifdef RUN_AS_DEMO
 void
-mcp_write_val
-(uint16 val)
+lcd_test ( void )
 {
-    int st;
+	printf ( "Testing LCD\n" );
 
-    write_msg.addr = MCP_ADDR;
-    write_msg.flags = 0; // write, 7 bit address
-    write_msg.length = sizeof(write_msg_data);
-    write_msg.xferred = 0;
-    write_msg.data = write_msg_data;
+	lcd_begin ();
 
-    write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
-    uint16 tmp = val >> 4;
-    write_msg_data[1] = tmp;
-    tmp = (val << 4) & 0x00FF;
-    write_msg_data[2] = tmp;
+	lcd_msg ( ip, "Eat more fish" );
+	// lcd_msg2 ( ip, "GPS 5244" );
+	delay ( 1000 );
 
-    st = i2c_master_xfer(I2C2, &write_msg, 1, 0);
-    // printf ( "MCP write val Xfer returns: %d\n", st );
-}
-#endif
+	// lcd_loop ( ip );
 
-void
-mcp_dump ( char *msg, uint8 buf[], int n )
-{
-	int i;
+	printf ( "Enter test loop\n" );
 
-	for ( i=0; i<n; i++ ) {
-	    printf ( "%s %d = %h\n", msg, i, buf[i] );
+	for ( ;; ) {
+	    lcd_msg ( ip, "Eat more fish" );
+	    lcd_msg2 ( ip, "GPS 5244" );
+	    delay ( 500 );
+
+	    lcd_msg ( ip, "GPS 5244" );
+	    lcd_msg2 ( ip, "Eat more fish" );
+	    delay ( 500 );
 	}
+
+	printf ( "Done testing LCD\n" );
+	spin ();
 }
-
-/* The read sends one byte (the 0x60 address with the 1 bit set
- *  to indicate a read.  The device responds with 5 bytes:
- *  0) status
- *  1) DAC data (high 8)
- *  2) DAC data (low 4)
- *  3) EEprom data (high 4)
- *  4) EEprom data (low 8)
- */
-
-#ifndef USE_IIC
-uint16
-mcp_read_val( void )
-{
-    uint16 tmp = 0;
-    int st;
-
-    read_msg.addr = MCP_ADDR;
-    read_msg.flags = I2C_MSG_READ;
-    read_msg.length = sizeof(read_msg_data);
-    read_msg.xferred = 0;
-    read_msg.data = read_msg_data;
-
-    st = i2c_master_xfer(I2C2, &read_msg, 1, 2);
-    // printf ( "MCP read val Xfer returns: %d\n", st );
-    // mcp_dump ( "MCP read",read_msg_data, 5 );
-
-    /* We don't care about the status and EEPROM bytes (0, 3, and 4). */
-    tmp = (read_msg_data[1] << 4);
-    tmp += (read_msg_data[2] >> 4);
-    return tmp;
-}
-#endif
-
-#ifdef USE_IIC
-
-struct i2c *xp;
-
-int
-mcp_read_val( void )
-{
-    int tmp = 0;
-    char io_buf[5];
-
-    i2c_recv ( xp, MCP_ADDR, io_buf, 5 );
-
-    // mcp_dump ( "MCP read", io_buf, 5 );
-
-    /* We don't care about the status and EEPROM bytes (0, 3, and 4). */
-    tmp = (io_buf[1] << 4);
-    tmp += (io_buf[2] >> 4);
-    return tmp;
-}
-void
-mcp_write_val ( int val )
-{
-    unsigned char io_buf[2];
-
-    io_buf[0] = (val >> 8) & 0xf;
-    io_buf[1] = val & 0xff;
-
-    i2c_send ( xp, MCP_ADDR, io_buf, 2 );
-
-    // write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
-    // write_msg_data[0] = MCP_WRITE_DAC | MCP_PD_NORMAL;
-    // uint16 tmp = val >> 4;
-    // write_msg_data[1] = tmp;
-    // tmp = (val << 4) & 0x00FF;
-    // write_msg_data[2] = tmp;
-}
-#endif
-
-/* This is a 12 bit dac, so we can write at most 0x3ff
- */
-#define TEST1	0x101
-#define TEST2	0x3ab
-#define TEST9	0x300
-
-int
-mcp_test ( void )
-{
-    uint16 val;
-    uint16 test_val;
-    int8 ok = 1;
-    int repeat;
-
-    printf ("Testing the MCP4725...\n");
-
-#ifdef notdef
-    printf ("Start first read from the DAC ...\n");
-
-    for ( repeat=0; repeat<5; repeat++ ) {
-	/* Read the value of the register (should be 0x0800 if factory fresh) */
-	printf ( " ******************* READ ********************\n" );
-	val = mcp_read_val();
-	printf("DAC Register reads as = %h\n", val);
-	val = TEST9 + repeat;
-	printf ( " ******************* WRITE (%h) ********************\n", val );
-	mcp_write_val ( val );
-    }
-#endif
-
-    // spin ();
-
-    test_val = TEST1;
-    mcp_write_val ( test_val );
-    printf("Write:  %h to the DAC\n", test_val);
-    val = mcp_read_val();
-    printf("Read from DAC = %h\n", val);
-    if (val != test_val)
-	ok = 0;
-
-    test_val = TEST2;
-    mcp_write_val ( test_val );
-    printf("Write:  %h to the DAC\n", test_val);
-    val = mcp_read_val();
-    printf("Read from DAC = %h\n", val);
-    if (val != test_val)
-	ok = 0;
-
-    if ( ! ok ) {
-        printf ("ERROR: MCP4725 not responding correctly\n");
-        return 0;
-    }
-
-    printf("MCP4725 seems to be working\n");
-    return 1;
-}
-
-#ifdef USE_IIC
-
-/* From kyu orange_pi/i2c_dac.c */
-static void
-dac_read ( struct i2c *ip, unsigned char *buf, int n )
-{
-        iic_recv ( MCP_ADDR, buf, n );
-}
-
-static void
-dac_show ( struct i2c *ip )
-{
-        unsigned char io[5];
-
-	memset ( io, 0, 5 );
-        dac_read ( ip, io, 5 );
-
-        printf ( "DAC status = %x\n", io[0] );
-        printf ( "DAC val = %x %x\n", io[1], io[2] );
-        printf ( "DAC ee = %x %x\n", io[3], io[4] );
-}
-#endif
 
 void
-setup ( void )
+main(void)
 {
     int fd;
-    int i;
-
 
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-    printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
-    printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
-    printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
-    printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
-    printf ( "+++++++++++++++++++++++++++++++++++++++\n" );
-    printf ( "Ready to go\n" );
+    printf ( "-- Booted: ready to go\n" );
 
-#ifdef USE_IIC
-    /* sda, scl */
-    // iic_init ( D30, D29 );
-    xp = i2c_gpio_new ( D30, D29 );
-    if ( ! xp ) {
-	printf ( "Cannot set up GPIO iic\n" );
-	spin ();
-    }
-
-    for ( i=0; i<4; i++ ) {
-	dac_show ( xp );
-	delay ( 500 );
-    }
-#else
-    // API change when we adopted the STM32duino i2c driver.
-    // i2c_master_enable(I2C2, 0);
-    i2c_master_enable ( I2C2, 0, 100000 );
-    // i2c_set_debug ( 1 );
+    lcd_test ();
+}
 #endif
 
-    mcp_i2c_setup();
-
-    if ( ! mcp_test() )
-	spin ();
-
-    printf ("Starting sawtooth wave\n");
-}
-
-/* At present this gives a sawtooth at about 32 Hz.
- * Any printout will add delays and change that timing.
+#ifdef notdef
+/* Also bogus for now.
+ * This was an early attempt to use the buggy libmaple/hardware driver.
+ * This is a kyu API.
  */
 void
-main(void)
+i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
 {
-    static uint16 dout = 0;
+    i2c_msg write_msg;
 
-    setup();
+    // printf ( "Start i2c_send\n" );
 
-    for ( ;; ) {
-	mcp_write_val(dout);
+    write_msg.addr = addr;
+    write_msg.flags = 0; // write, 7 bit address
+    write_msg.length = count;
+    write_msg.xferred = 0;
+    // write_msg.data = write_buffer;
+    write_msg.data = buf;
 
-	dout += 50;
-	if (dout >= 32768) {
-	    dout = 0;
+    // write_buffer[0] = buf[0];
+
+    i2c_master_xfer ( I2C2, &write_msg, 1, 2000);
+    // printf ( "Finished i2c_send\n" );
+}
+#endif
+
+/* It is pretty much unchanged Kyu code below here */
+
+/* ---------------------------------------------- */
+/* ---------------------------------------------- */
+
+/* i2c LCD driver
+ */
+#define LCD_ADDR	0x27
+
+#define LCD_LIGHT	0x08	/* turn backlight LED on */
+#define LCD_ENA		0x04	/* for strobe pulse */
+#define LCD_READ	0x02	/* we never read */
+#define LCD_DATA	0x01	/* 0 is command */
+
+#define LCD_WIDTH	16
+
+/* Base addresses for up to 4 lines (we have only 2)
+ */
+#define LCD_LINE_1	0x80
+#define LCD_LINE_2	0xC0
+// #define LCD_LINE_3	0x94
+// #define LCD_LINE_4	0xD4
+
+static int use_led = LCD_LIGHT;
+// static int use_led = 0;
+
+/* Commands to the HD44780 */
+
+/* The following will get sent to put the device
+ * into 4 bit mode.  We don't know what mode it is
+ * in when we get hold of it, but sending 0011
+ * three times will put it into 8 bit mode.
+ * Then sending 0010 will put it into 4 bit mode,
+ * which is what we want.
+ */
+#define INIT1		0x33
+#define INIT2		0x32
+
+/* This sets two bits (the low 2), which are "IS"
+ * I = 1 says to increment by one in display ram when a char is written.
+ * S = 0 says to NOT shift the display on a write.
+ */
+#define INIT_CURSOR	0x06
+
+/* This sets three bits (the low three), which are "DCB"
+ * D = 1 says to turn on the display
+ * C = 0 says no cursor.
+ * B = 0 says no blink.
+ */
+#define INIT_DISPLAY	0x0c
+
+/* The two low bits are "don't care", then we have 3 bits "DNF"
+ * D = 0  says to use 4 bit mode
+ * N = 1  says there are 2 lines (rather than one)
+ * F = 0  says use 5x8 font (rather than 5x10)
+ */
+#define INIT_FUNC	0x28
+
+#define CLEAR_DISPLAY	0x01
+
+#define DELAY_INIT	500
+// #define DELAY_NORM	500	ok
+// #define DELAY_NORM	400	ok
+// #define DELAY_NORM	200	too short
+// #define DELAY_NORM	250	too short
+#define DELAY_NORM	300
+
+/* ------------------------------------------------------- */
+
+/* The 8574 is pleasantly simple.
+ * no complex initialization or setup,
+ * just write 8 bits to it and they appears on the output pins.
+ */
+
+static void
+lcd_write ( struct i2c *ip, int data )
+{
+	unsigned char buf[2];
+
+	buf[0] = data;
+	i2c_send ( ip, LCD_ADDR, buf, 1 );
+
+	/* tjt - needed on stm32 for some reason */
+	// delay_us ( 200 ); -- OK
+	delay_us ( 50 );
+	// delay_us ( 40 ); -- not enough
+	// delay_us ( 20 ); -- not enough
+	// delay_us ( 10 ); - not enough
+}
+
+/* Send data, strobe the ENA line.
+ * The shortest possible pulse works fine.
+ * There is no need for extra delays.
+ */
+static void
+lcd_send ( struct i2c *ip, int data )
+{
+	lcd_write ( ip, data );
+	lcd_write ( ip, data | LCD_ENA );
+
+	// extra delay
+	// delay_us ( 50 );
+
+	lcd_write ( ip, data );
+
+	delay_us ( DELAY_NORM );
+}
+
+/* Send data to the display */
+static void
+lcd_data ( struct i2c *ip, int data )
+{
+	int hi, lo;
+
+	hi = use_led | LCD_DATA | (data & 0xf0);
+	lo = use_led | LCD_DATA | ((data<<4) & 0xf0);
+
+	lcd_send ( ip, hi );
+	lcd_send ( ip, lo );
+}
+
+/* Send configuration commands to the unit */
+static void
+lcd_cmd ( struct i2c *ip, int data )
+{
+	int hi, lo;
+
+	hi = use_led | (data & 0xf0);
+	lo = use_led | ((data<<4) & 0xf0);
+
+	lcd_send ( ip, hi );
+	lcd_send ( ip, lo );
+}
+
+static void
+lcd_string ( struct i2c *ip, char *msg )
+{
+	int i;
+
+	for ( i=0; i<LCD_WIDTH; i++ ) {
+	    if ( *msg )
+		lcd_data ( ip, *msg++ );
+	    else
+		lcd_data ( ip, ' ' );
 	}
-    }
+}
+
+void
+lcd_msg ( struct i2c *ip, char *msg )
+{
+	lcd_cmd ( ip, LCD_LINE_1 );
+	lcd_string ( ip, msg );
+}
+
+void
+lcd_msg2 ( struct i2c *ip, char *msg )
+{
+	lcd_cmd ( ip, LCD_LINE_2 );
+	lcd_string ( ip, msg );
+}
+
+/* Get it into 4 bit mode */
+void
+lcd_init_4 ( struct i2c *ip )
+{
+	/* get into 4 bit mode */
+	lcd_cmd ( ip, INIT1 );
+	lcd_cmd ( ip, INIT2 );
+}
+
+void
+lcd_init ( struct i2c *ip )
+{
+	lcd_init_4 ( ip );
+
+	printf ( "init_4 OK\n" );
+
+	lcd_cmd ( ip, INIT_CURSOR );
+	lcd_cmd ( ip, INIT_DISPLAY );
+	lcd_cmd ( ip, INIT_FUNC );
+
+	lcd_cmd ( ip, CLEAR_DISPLAY );
+
+	// important
+	delay_us ( DELAY_INIT );
+}
+
+/* As above, but don't clear display */
+void
+lcd_reinit ( struct i2c *ip )
+{
+	lcd_init_4 ( ip );
+
+	// printf ( "init_4 OK\n" );
+
+	lcd_cmd ( ip, INIT_CURSOR );
+	lcd_cmd ( ip, INIT_DISPLAY );
+	lcd_cmd ( ip, INIT_FUNC );
+
+	// lcd_cmd ( ip, CLEAR_DISPLAY );
+
+	// important
+	delay_us ( DELAY_INIT );
+}
+
+void
+lcd_loop ( struct i2c *ip )
+{
+	char msg[17];
+	int i;
+
+	for ( i=0; i<LCD_WIDTH; i++ )
+	    msg[i] = ' ';
+	msg[LCD_WIDTH] = '\0';
+
+	msg[0] = '*';
+	lcd_msg2 ( ip, msg );
+	// thr_delay ( 200 );
+	delay ( 200 );
+
+	for ( ;; ) {
+	    for ( i=1; i<LCD_WIDTH; i++ ) {
+		if ( i > 0 )
+		    msg[i-1] = ' ';
+		msg[i] = '*';
+		lcd_msg2 ( ip, msg );
+		// thr_delay ( 200 );
+		delay ( 200 );
+	    }
+	    for ( i=LCD_WIDTH-2; i >= 0; i-- ) {
+		msg[i+1] = ' ';
+		msg[i] = '*';
+		lcd_msg2 ( ip, msg );
+		// thr_delay ( 200 );
+		delay ( 200 );
+	    }
+	}
 }
 
 /* THE END */

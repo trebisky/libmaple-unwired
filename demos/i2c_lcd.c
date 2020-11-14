@@ -24,26 +24,46 @@
 // #define RUN_AS_DEMO
 
 #include <unwired.h>
-#include <libmaple/i2c.h>
+#include <i2c.h>
 
-/* totally bogus, but we will clean up later */
-struct i2c {
-};
+/* The idea here is that if we don't define this,
+ * we can use this as part of a bigger project.
+ */
+#define RUN_AS_DEMO
 
-/* No reason this silly thing shouldn't be global */
-static struct i2c *ip = (struct i2c *) 0;
+/* On 11-14-2020 I switched to using the bit-bang driver
+ * and adopted my Kyu-like i2c API in an "official" way.
+ */
+
+/* No reason this shouldn't be global */
+static struct i2c *ip;
 
 void lcd_init ( struct i2c *ip );
 void lcd_begin ( void );
 void lcd_msg ( struct i2c *ip, char *msg );
 void lcd_msg2 ( struct i2c *ip, char *msg );
 
-void lcd_begin ( void )
+void
+lcd_begin ( void )
 {
+#ifdef notdef
 	/* Very important */
 	i2c_master_enable ( I2C2, 0);
+#endif
+	printf ( " ---- Booted\n" );
+
+	/* D30 is sda, D29 is sclk */
+	ip = i2c_gpio_new ( D30, D29 );
+	if ( ! ip ) {
+	    printf ( "Cannot set up GPIO iic\n" );
+	    spin ();
+	}
+
+	printf ( "Start init sequence\n" );
 
 	lcd_init ( ip );
+
+	printf ( "Finished init sequence\n" );
 }
 
 #ifdef RUN_AS_DEMO
@@ -55,12 +75,25 @@ lcd_test ( void )
 	lcd_begin ();
 
 	lcd_msg ( ip, "Eat more fish" );
-	lcd_msg2 ( ip, "GPS 5244" );
+	// lcd_msg2 ( ip, "GPS 5244" );
+	delay ( 1000 );
 
 	// lcd_loop ( ip );
 
-	// lcd_xxx ( ip );
+	printf ( "Enter test loop\n" );
+
+	for ( ;; ) {
+	    lcd_msg ( ip, "Eat more fish" );
+	    lcd_msg2 ( ip, "GPS 5244" );
+	    delay ( 500 );
+
+	    lcd_msg ( ip, "GPS 5244" );
+	    lcd_msg2 ( ip, "Eat more fish" );
+	    delay ( 500 );
+	}
+
 	printf ( "Done testing LCD\n" );
+	spin ();
 }
 
 void
@@ -77,8 +110,9 @@ main(void)
 }
 #endif
 
+#ifdef notdef
 /* Also bogus for now.
- * once things are working, absorb this into lcd_write()
+ * This was an early attempt to use the buggy libmaple/hardware driver.
  * This is a kyu API.
  */
 void
@@ -100,6 +134,7 @@ i2c_send ( struct i2c *ip, int addr, unsigned char *buf, int count )
     i2c_master_xfer ( I2C2, &write_msg, 1, 2000);
     // printf ( "Finished i2c_send\n" );
 }
+#endif
 
 /* It is pretty much unchanged Kyu code below here */
 
@@ -199,9 +234,9 @@ static void
 lcd_send ( struct i2c *ip, int data )
 {
 	lcd_write ( ip, data );
-
 	lcd_write ( ip, data | LCD_ENA );
 
+	// extra delay
 	// delay_us ( 50 );
 
 	lcd_write ( ip, data );
@@ -276,7 +311,7 @@ lcd_init ( struct i2c *ip )
 {
 	lcd_init_4 ( ip );
 
-	// printf ( "init_4 OK\n" );
+	printf ( "init_4 OK\n" );
 
 	lcd_cmd ( ip, INIT_CURSOR );
 	lcd_cmd ( ip, INIT_DISPLAY );
