@@ -35,23 +35,23 @@ BOARD_INCLUDE_DIR := $(MAKEDIR)/board-includes
 # Try "make help" for more information on BOARD and MEMORY_TARGET;
 # these default to a Maple Flash build.
 
-# Tom says for my maple boards, I use the Maple DFU loader and USB
-# so I want a flash build.
-BOARD ?= maple
-MEMORY_TARGET ?= flash
-
 # I don't actually have any maple_mini boards
 # and the blue pill has the LED on a different pin,
 # but I am ready if any ever show up.
 #BOARD ?= maple_mini
 #MEMORY_TARGET ?= flash
 
+# Tom says for my maple boards, I use the Maple DFU loader and USB
+# so I want a flash build.
+#BOARD ?= maple
+#MEMORY_TARGET ?= flash
+
 #  But for my blue pills, I use my STLink and so I want a jtag build.
 #  tjt - to add the blue pill target, I also needed to copy the
 #  maple_mini.mk file to this:
 #     support/make/board-includes/blue_pill.mk
-#BOARD ?= blue_pill
-#MEMORY_TARGET ?= jtag
+BOARD ?= blue_pill
+MEMORY_TARGET ?= jtag
 
 # Chooses the bootloader, available: maple and robotis
 BOOTLOADER ?= maple
@@ -152,8 +152,14 @@ UPLOAD_flash := $(SUPPORT_PATH)/scripts/reset.py && \
                 $(DFU) -a1 -d $(BOARD_USB_VENDOR_ID):$(BOARD_USB_PRODUCT_ID) -D $(BUILD_PATH)/$(BOARD).bin -R
 endif
 
-dfu:
+olddfu:
 	$(DFU) -a1 -d $(BOARD_USB_VENDOR_ID):$(BOARD_USB_PRODUCT_ID) -D $(BUILD_PATH)/$(BOARD).bin -R
+
+dfu:
+	maple-util $(BUILD_PATH)/$(BOARD).bin
+
+term:
+	picocom -b 115200 /dev/ttyACM0
 
 ifeq ($(BOOTLOADER),robotis)
 UPLOAD_flash := $(SUPPORT_PATH)/scripts/robotis-loader.py $(ROBOTIS_PORT) $(BUILD_PATH)/$(BOARD).bin
@@ -221,8 +227,11 @@ help:
 #
 OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
 
-burn:	build/maple_mini.elf
-	openocd $(OCDCFG) -c "program build/maple_mini.elf verify reset exit"
+TARGET = $(BUILD_PATH)/$(BOARD).bin
+ETARGET = $(BUILD_PATH)/$(BOARD).elf
+
+burn:	$(ETARGET)
+	openocd $(OCDCFG) -c "program $(ETARGET) verify reset exit"
 
 cscope:
 	rm -rf cscope.*

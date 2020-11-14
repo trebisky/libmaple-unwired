@@ -41,6 +41,7 @@ cSRCS_$(d) += usart.c
 cSRCS_$(d) += usart_private.c
 cSRCS_$(d) += util.c
 cSRCS_$(d) += i2c.c
+cSRCS_$(d) += iic.c
 cSRCS_$(d) += serial.c
 cSRCS_$(d) += serial_usb.c
 cSRCS_$(d) += time.c

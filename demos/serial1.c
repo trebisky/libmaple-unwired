@@ -34,12 +34,14 @@ hello_test ( int fd )
     int count;
 
     for ( count=1; ; count++ ) {
-        serial_puts ( fd, "Hello out there " );
-	serial_print_num ( fd, count );
-	serial_putc ( fd, '\n' );
+        serial_printf ( fd, "Hello out there %d\n", count );
+        // serial_puts ( fd, "Hello out there " );
+	// serial_print_num ( fd, count );
+	// serial_putc ( fd, '\n' );
 
 	togglePin(BOARD_LED_PIN);
-	delay ( 1000 );
+	// delay ( 1000 );
+	delay ( 500 );
     }
 }
 

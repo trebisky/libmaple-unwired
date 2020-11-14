@@ -36,6 +36,11 @@
 
 #define MONSTER_DELAY	40
 
+/* Define this if you want to use a USB serial console.
+ * XXX - So far this does weird stuff on a real Maple board.
+#define USE_USB_SERIAL
+ */
+
 #include <libmaple/util.h>
 #include <libmaple/i2c.h>
 
@@ -90,14 +95,26 @@ void
 main(void)
 {
     int fd;
+    int x;
 
+#ifdef USE_USB_SERIAL
+    fd = serial_begin ( SERIAL_USB, 999 );
+#else
     fd = serial_begin ( SERIAL_1, 115200 );
+#endif
     set_std_serial ( fd );
 
     i2c_master_enable ( I2C2, 0, 100000 );
-    // i2c_set_debug ( 99 );
+    i2c_set_debug ( 99 );
 
-    printf ( "-- BOOTED -- off we go\n" );
+    printf ( "-- BOOTED -- \n" );
+
+#ifdef USE_USB_SERIAL
+    printf ( "Waiting for you to type something\n" );
+    x = getc ();
+#endif
+
+    printf ( "-- OK -- off we go\n" );
 
     hdc_test ();
 }

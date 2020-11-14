@@ -5,9 +5,11 @@
 //
 // This is finally a clean example of how to use serial USB.
 
-#include <unwired.h>
+// #include <unwired.h>
 
-#include <libmaple/usb.h>
+#include <serial.h>
+#include <io.h>
+#include <time.h>
 
 /* 
  * The trick to making USB work was to do two things:
