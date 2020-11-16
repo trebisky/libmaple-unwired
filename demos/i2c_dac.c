@@ -364,8 +364,12 @@ setup ( void )
 
 #ifdef USE_IIC
     /* sda, scl */
-    // iic_init ( D30, D29 );
-    xp = i2c_gpio_new ( D30, D29 );
+    // For Maple
+    // xp = i2c_gpio_new ( D30, D29 );
+
+    // For Blue Pill
+    xp = i2c_gpio_new ( PB11, PB10 );
+
     if ( ! xp ) {
 	printf ( "Cannot set up GPIO iic\n" );
 	spin ();

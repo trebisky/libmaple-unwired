@@ -50,6 +50,7 @@ cSRCS_$(d) += digital.c
 cSRCS_$(d) += digital_f1.c
 cSRCS_$(d) += util_hooks_f1.c
 cSRCS_$(d) += debug_f1.c
+cSRCS_$(d) += random.c
 
 # These all used to be in the stm32f1 directory
 cSRCS_$(d) += usart_f1.c

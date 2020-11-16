@@ -43,15 +43,15 @@ BOARD_INCLUDE_DIR := $(MAKEDIR)/board-includes
 
 # Tom says for my maple boards, I use the Maple DFU loader and USB
 # so I want a flash build.
-BOARD ?= maple
-MEMORY_TARGET ?= flash
+#BOARD ?= maple
+#MEMORY_TARGET ?= flash
 
 #  But for my blue pills, I use my STLink and so I want a jtag build.
 #  tjt - to add the blue pill target, I also needed to copy the
 #  maple_mini.mk file to this:
 #     support/make/board-includes/blue_pill.mk
-#BOARD ?= blue_pill
-#MEMORY_TARGET ?= jtag
+BOARD ?= blue_pill
+MEMORY_TARGET ?= jtag
 
 # Chooses the bootloader, available: maple and robotis
 BOOTLOADER ?= maple
@@ -219,13 +219,13 @@ help:
 	@echo ""
 
 # This is what we expect
-#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
+OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
 # Some newer chips are shipping with a idcode of 0x2ba01477, this will make them work.
 #  without this, you will see:
 # Warn : UNEXPECTED idcode: 0x2ba01477
 # Error: expected 1 of 1: 0x1ba01477
 #
-OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
+#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
 
 TARGET = $(BUILD_PATH)/$(BOARD).bin
 ETARGET = $(BUILD_PATH)/$(BOARD).elf

@@ -261,9 +261,9 @@ init ( void )
      */
     // board_setup_usb ();
 
-    printf ( "In init ....\n" );
+    // printf ( "In init ....\n" );
     usb_serial_begin ();
-    printf ( "USB serial begin has returned\n" );
+    // printf ( "USB serial begin has returned\n" );
 
     /* This simply calls afio_init().
      * And all that does is to gate on the AFIO clock

@@ -43,6 +43,8 @@ void lcd_begin ( void );
 void lcd_msg ( struct i2c *ip, char *msg );
 void lcd_msg2 ( struct i2c *ip, char *msg );
 
+void lcd_test_loop ( struct i2c *ip );
+
 void
 lcd_begin ( void )
 {
@@ -59,11 +61,11 @@ lcd_begin ( void )
 	    spin ();
 	}
 
-	printf ( "Start init sequence\n" );
+	// printf ( "Start init sequence\n" );
 
 	lcd_init ( ip );
 
-	printf ( "Finished init sequence\n" );
+	// printf ( "Finished init sequence\n" );
 }
 
 #ifdef RUN_AS_DEMO
@@ -71,8 +73,6 @@ void
 lcd_test ( void )
 {
 	printf ( "Testing LCD\n" );
-
-	lcd_begin ();
 
 	lcd_msg ( ip, "Eat more fish" );
 	// lcd_msg2 ( ip, "GPS 5244" );
@@ -99,14 +99,18 @@ lcd_test ( void )
 void
 main(void)
 {
-    int fd;
+	int fd;
 
-    fd = serial_begin ( SERIAL_1, 115200 );
-    set_std_serial ( fd );
+	fd = serial_begin ( SERIAL_1, 115200 );
+	set_std_serial ( fd );
 
-    printf ( "-- Booted: ready to go\n" );
+	printf ( "-- Booted: ready to go\n" );
 
-    lcd_test ();
+	lcd_begin ();
+
+	// lcd_test ();
+	// lcd_loop ( ip );
+	lcd_test_loop ( ip );
 }
 #endif
 
@@ -311,8 +315,6 @@ lcd_init ( struct i2c *ip )
 {
 	lcd_init_4 ( ip );
 
-	printf ( "init_4 OK\n" );
-
 	lcd_cmd ( ip, INIT_CURSOR );
 	lcd_cmd ( ip, INIT_DISPLAY );
 	lcd_cmd ( ip, INIT_FUNC );
@@ -339,6 +341,32 @@ lcd_reinit ( struct i2c *ip )
 
 	// important
 	delay_us ( DELAY_INIT );
+}
+
+/* Originally run for 2,000,000+ cycles on the orange pi
+ */
+void
+lcd_test_loop ( struct i2c *ip )
+{
+        static int test_state = 0;
+        int count;
+        char buf[32];
+
+        count = 0;
+        for ( ;; ) {
+            // thr_delay ( 1000 );
+            delay ( 500 );
+            count++;
+            if ( test_state ) {
+                lcd_msg ( ip, "Be nice" );
+                test_state = 0;
+            } else {
+                lcd_msg ( ip, "Pray more often" );
+                test_state = 1;
+            }
+            sprintf ( buf, "  %d", count );
+            lcd_msg2 ( ip, buf );
+        }
 }
 
 void
