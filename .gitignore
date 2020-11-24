@@ -7,6 +7,7 @@ libmaple/stm32f2-f4.tar
 ORIG
 libmaple/ORIG
 libmaple/zzz
+unwired_rules.mk
 tags
 TAGS
 *~
@@ -25,6 +26,4 @@ libraries_ORIG/
 support/make/OLD/
 GIT_crap
 examples
-bbb.c
-hdc.c
-main.c
+*.c

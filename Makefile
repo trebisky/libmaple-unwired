@@ -114,7 +114,7 @@ LIBMAPLE_MODULES += $(SRCROOT)/libmaple
 LIBMAPLE_MODULES += $(SRCROOT)/libmaple/usb   # The USB module is kept separate
 # This was libmaple/stm32f1 - but I got rid of that 10-15-2020
 ##LIBMAPLE_MODULES += $(LIBMAPLE_MODULE_SERIES) # STM32 series submodule in libmaple
-LIBMAPLE_MODULES += $(SRCROOT)/unwired
+#LIBMAPLE_MODULES += $(SRCROOT)/unwired
 
 # Official libraries:
 #tjt#LIBMAPLE_MODULES += $(SRCROOT)/libraries/Servo

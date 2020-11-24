@@ -30,8 +30,10 @@
 #include <unwired.h>
 #include <i2c.h>
 
+static struct i2c *ip;
+
 /* Prototypes */
-void ssd_init ( void );
+void ssd_init ( struct i2c * );
 void ssd_set_pixel ( int, int );
 void ssd_clear_pixel ( int, int );
 void ssd_clear_all ( void );
@@ -357,7 +359,8 @@ static uint8_t ssd1306_buffer[BUF_SIZE] = {
 };
 #endif
 
-static struct i2c *ip;
+#ifdef RUN_AS_DEMO
+
 
 void gb_init_rand ( int );
 int gb_unif_rand ( int );
@@ -461,6 +464,7 @@ test4 ( void )
 void
 main ( void )
 {
+	struct i2c *xip;
 
 	// size_test ();
 
@@ -468,15 +472,15 @@ main ( void )
         // ip = i2c_gpio_new ( D30, D29 );
 
 	/* For blue pill */
-        ip = i2c_gpio_new ( PB11, PB10 );
+        xip = i2c_gpio_new ( PB11, PB10 );
 
-        if ( ! ip ) {
+        if ( ! xip ) {
             printf ( "Cannot set up GPIO iic\n" );
             spin ();
         }
 
 	printf ( "Initalize SSD\n" );
-	ssd_init ();
+	ssd_init ( xip );
 
 #ifdef notdef
 	printf ( "Load display\n" );
@@ -493,10 +497,13 @@ main ( void )
 
 	spin ();
 }
+#endif /* RUN_AS_DEMO */
 
 void
-ssd_init ( void )
+ssd_init ( struct i2c *aip )
 {
+    ip = aip;
+
     SSD1306_Begin ();
 }
 
@@ -575,7 +582,8 @@ SSD1306_Begin ( void )
   // The SSD1306 does its own reset, and there is a race.
   // Usually the processor gets here first,
   // so the delay is required.
-  delay(10);
+  // delay(10);
+  delay(500);
 
   // Init sequence
   ssd1306_command(SSD1306_DISPLAYOFF);                    // 0xAE

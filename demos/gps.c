@@ -23,26 +23,29 @@
 /* ------------------------------------------------------------- */
 
 #include <unwired.h>
-#include <libmaple/util.h>
-#include <libmaple/i2c.h>
-#include <libmaple/iwdg.h>
+#include <util.h>
+#include <i2c.h>
+#include <iwdg.h>
 
 #include <string.h>
 
-/* Bogus nonsense until I clean up the API
- */
-struct i2c {
-};
+void ssd_init ( struct i2c * );
+void ssd_clear_all ( void );
+void ssd_display ( void );
+void ssd_set_textsize ( int );
+void ssd_text ( int, int, char * );
 
-/* This may as well be global since it is nonsense.
- * There is really no need to initialize it.
- */
-struct i2c *ip = (void *) 0;
+// #define LCD_DISPLAY
+#define SSD_DISPLAY
 
+struct i2c *ip;
+
+#ifdef LCD_DISPLAY
 void lcd_begin ( void );
 void lcd_reinit ( void );
 void lcd_msg ( struct i2c *, char * );
 void lcd_msg2 ( struct i2c *, char * );
+#endif
 
 #ifdef notdef
 /* I see this without satellite lock */
@@ -233,6 +236,20 @@ pad_to ( char *buf, int n )
 }
 
 void
+gps_fail ( char *msg )
+{
+	printf ( "GPS fail: %s\n", msg );
+
+	ssd_clear_all ();
+	ssd_set_textsize ( 4 );
+	ssd_text ( 0, 0, msg );
+	ssd_display ();
+}
+
+/* This gets called with every line that comes from
+ * the GPS serial stream.
+ */
+void
 gps_line ( char *line )
 {
 	char raw[12];
@@ -240,27 +257,50 @@ gps_line ( char *line )
 	char time[12];
 	char nsat[4];
 
-	if ( line[6] != ',' )
-	    return;
+	iwdg_feed ();
 
-	nmea_get ( raw, line, 0 );
-	if ( strcmp ( raw, "$GNGGA" ) != 0 )
+	/* Complete bogus junk */
+	if ( line[6] != ',' ) {
+	    // gps_fail ( "FAIL1" );
 	    return;
+	}
+
+	/* We only care about GNGGA lines, and
+	 * we should get one per second.
+	 */
+	nmea_get ( raw, line, 0 );
+	if ( strcmp ( raw, "$GNGGA" ) != 0 ) {
+	    // Not really a fail, we expect several of these
+	    // every second.
+	    // gps_fail ( "FAIL2" );
+	    return;
+	}
 
 	nmea_get ( nsat, line, 7 );
 	    
-	printf ( "%s\n", line );
+	printf ( "GPS line: %s\n", line );
 
 	/* Get the UT time and convert to local */
+	/* When we turn this on in a metal shed,
+	 * we see:
+	 * $GNGGA,,,,,,0,00,99.99,,,,,,*56
+	 * This will yield FAIL3
+	 */
 	nmea_get ( raw, line, 1 );
-	if ( strlen(raw) != 9 )
+	if ( strlen(raw) != 9 ) {
+	    gps_fail ( "FAIL3" );
 	    return;
+	}
+
 	colons ( time, raw );
 	ut2lt ( time );
+
 	printf ( "Time = %s\n", time );
 
 	/* Get the elevation im meters */
 	nmea_get ( raw, line, 9 );
+
+#ifdef LCD_DISPLAY
 	if ( strlen(raw) < 1 ) {
 	    strcpy ( alt, " -- ? --" );
 	} else {
@@ -278,8 +318,26 @@ gps_line ( char *line )
 
 	lcd_msg ( ip, alt );
 	lcd_msg2 ( ip, time );
+#endif
 
-	iwdg_feed ();
+#ifdef SSD_DISPLAY
+	if ( strlen(raw) < 1 ) {
+	    strcpy ( alt, " ?" );
+	} else {
+	    printf ( "Elev = %s\n", raw );
+	    sprintf ( alt, "%d", m2f(raw) );
+	    printf ( "Elev (f) = %s\n", alt );
+	}
+
+	ssd_clear_all ();
+	ssd_set_textsize ( 4 );
+	ssd_text ( 0, 0, alt );
+	ssd_set_textsize ( 2 );
+	ssd_text ( 10, 49, time );
+	ssd_display ();
+#endif
+
+//	iwdg_feed ();
 	printf ( " ~~ update finished\n" );
 	toggleLED();
 }
@@ -319,15 +377,36 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-
     fd_gps = serial_begin ( SERIAL_2, 9600 );
 
-    lcd_begin ();
+    /* D30 is sda, D29 is sclk */
+    // ip = i2c_gpio_new ( D30, D29 );
 
+    /* For blue pill */
+    ip = i2c_gpio_new ( PB11, PB10 );
+
+    if ( ! ip ) {
+	printf ( "Cannot set up GPIO iic\n" );
+	spin ();
+    }
+
+#ifdef SSD_DISPLAY
+    printf ( "Initalize SSD\n" );
+    ssd_init ( ip );
+    gps_fail ( "INIT" );
+    // ssd_clear_all ();
+    // ssd_display ();
+#endif
+
+#ifdef LCD_DISPLAY
+    lcd_begin ();
     lcd_msg ( ip, "Starting ..." );
+#endif
 
     /* Sometimes i2c locks up, and until I find and
      * fix that bug, this helps a lot.
+     * (the above was prior to switching to bit/bang i2c)
+     *
      * The iwdt is fed by a 40 khz clock.
      * With a prescaler of 4, the iwdg counts at 4 khz.
      * The reload register is only 12 bits (max value 0xfff)

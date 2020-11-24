@@ -4,9 +4,12 @@ dirstack_$(sp)  := $(d)
 d               := $(dir)
 BUILDDIRS       += $(BUILD_PATH)/$(d)
 
-LIBMAPLE_INCLUDES := -I$(LIBMAPLE_PATH)/include
+#LIBMAPLE_INCLUDES := -I$(LIBMAPLE_PATH)/include
+LIBMAPLE_INCLUDES := -I$(LIBMAPLE_PATH)/include -I$(LIBMAPLE_PATH)/$(BOARD)
 #LIBMAPLE_INCLUDES += -I$(LIBMAPLE_MODULE_SERIES)/include
 LIBMAPLE_INCLUDES += -I$(LIBMAPLE_PATH)
+
+#UNWIRED_INCLUDES := -I$(d) -I$(d)/$(BOARD)
 
 LIBMAPLE_PRIVATE_INCLUDES := -I$(LIBMAPLE_PATH)
 
@@ -21,8 +24,8 @@ sSRCS_$(d) += exc.S
 sSRCS_$(d) += start.S
 
 # Local rules and targets
-cSRCS_$(d) := start_c.c
 cSRCS_$(d) += init.c
+cSRCS_$(d) += board.c
 cSRCS_$(d) += setup_f1.c
 cSRCS_$(d) += adc.c
 cSRCS_$(d) += dac.c

@@ -3,11 +3,11 @@
 #OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.cpp=.o))
 
 # tjt - We are only doing c sources now!
-SRC_FILES = main.c
+#SRC_FILES = main.c
 
 # tjt - See if this will handle more than one source file
 # It will !!!
-##SRC_FILES = main.c i2c_lcd.c
+SRC_FILES = gps.c i2c_ssd.c
 
 OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.c=.o))
 
