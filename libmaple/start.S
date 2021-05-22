@@ -46,9 +46,13 @@
         .code 16
         .thumb_func
 
+/*
         .globl __start__
         .type __start__, %function
-__start__:
+__start__: */
+        .globl __exc_reset
+        .type __exc_reset, %function
+__exc_reset:
         .fnstart
         ldr r1,=__msp_init
         mov sp,r1

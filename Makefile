@@ -133,7 +133,20 @@ $(foreach m,$(LIBMAPLE_MODULES),$(eval $(call LIBMAPLE_MODULE_template,$(m))))
 ## Targets
 ##
 
-# main target
+# Moved here from build-targets
+# This is where you list the source files that go
+# in your project.
+#
+# This is a little bush league perhaps, but it is how I am doing things.
+# I keep all the files for all my projects here in the top level directory
+# and change the following lines to rebuild different projects
+
+# Project 1 - my GPS altimeter
+#SRC_FILES = gps.c i2c_ssd.c
+
+# Project 2 - my bmp180/bmp390 depth gauge
+SRC_FILES = depth.c i2c_ssd.c bmp180.c bmp390.c
+
 include $(SRCROOT)/build-targets.mk
 
 .PHONY: install vesuvius clean help cscope tags ctags ram flash jtag doxygen mrproper list-boards
@@ -158,8 +171,11 @@ olddfu:
 dfu:
 	maple-util $(BUILD_PATH)/$(BOARD).bin
 
+#PORT = /dev/ttyACM0
+PORT = /dev/ttyUSB1
+
 term:
-	picocom -b 115200 /dev/ttyACM0
+	picocom -b 115200 $(PORT)
 
 ifeq ($(BOOTLOADER),robotis)
 UPLOAD_flash := $(SUPPORT_PATH)/scripts/robotis-loader.py $(ROBOTIS_PORT) $(BUILD_PATH)/$(BOARD).bin
@@ -219,13 +235,13 @@ help:
 	@echo ""
 
 # This is what we expect
-OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
+#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/stm32f1x.cfg
 # Some newer chips are shipping with a idcode of 0x2ba01477, this will make them work.
 #  without this, you will see:
 # Warn : UNEXPECTED idcode: 0x2ba01477
 # Error: expected 1 of 1: 0x1ba01477
 #
-#OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
+OCDCFG = -f /usr/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/share/openocd/scripts/target/cs32f1x.cfg
 
 TARGET = $(BUILD_PATH)/$(BOARD).bin
 ETARGET = $(BUILD_PATH)/$(BOARD).elf

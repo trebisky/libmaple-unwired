@@ -7,7 +7,8 @@
 
 # tjt - See if this will handle more than one source file
 # It will !!!
-SRC_FILES = gps.c i2c_ssd.c
+# - moved to main Makefile 5-20-2021
+#SRC_FILES = gps.c i2c_ssd.c
 
 OBJ_FILES = $(addprefix $(BUILD_PATH)/,$(SRC_FILES:.c=.o))
 

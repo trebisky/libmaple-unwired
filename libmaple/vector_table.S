@@ -40,6 +40,7 @@ __stm32_vector_table:
 /* CM3 core interrupts */
 	.long	__msp_init
 	.long	__exc_reset
+
 	.long	__exc_nmi
 	.long	__exc_hardfault
 	.long	__exc_memmanage

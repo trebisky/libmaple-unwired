@@ -302,6 +302,7 @@ start_c (void)
     // int exit_code;
 
     /* Initialize .data, if necessary. */
+    /* The first "if" looks totally bogus and broken, tjt */
     if (src != dst) {
         int *end = (int*)&__data_end__;
         while (dst < end) {

@@ -43,9 +43,11 @@ EXTERN(__msp_init)
 PROVIDE(__msp_init = ORIGIN(ram) + LENGTH(ram));
 
 /* Reset vector and chip reset entry point */
+/* tjt says the heck with this 11-24-2020
 EXTERN(__start__)
 ENTRY(__start__)
 PROVIDE(__exc_reset = __start__);
+*/
 
 /* Heap boundaries, for libmaple */
 EXTERN(_lm_heap_start);
