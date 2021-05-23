@@ -502,6 +502,7 @@ depth ( struct i2c *ip )
 	int t1;
 	int alt;
 
+	printf ( "Running screen demo on BMP180\n" );
 	/* The bmp180 driver requires us to read
 	 * both T and P.
 	 */
@@ -546,7 +547,10 @@ main(void)
     fd = serial_begin ( SERIAL_1, 115200 );
     set_std_serial ( fd );
 
-    fd_gps = serial_begin ( SERIAL_2, 9600 );
+    printf ( "\n" );
+    printf ( "-- BOOTED -- off we go\n" );
+
+    // fd_gps = serial_begin ( SERIAL_2, 9600 );
 
     /* D30 is sda, D29 is sclk */
     // ip = i2c_gpio_new ( D30, D29 );
@@ -583,8 +587,6 @@ main(void)
      * 2000 / 1.6 = 1250 gives us 2 seconds.
      */
     // iwdg_init(IWDG_PRE_64, 1250);
-
-    printf ( "-- BOOTED -- off we go\n" );
 
     // bmp_diag1 ( ip );
 
