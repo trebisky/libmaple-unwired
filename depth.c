@@ -44,6 +44,7 @@ int bmp_tf ( struct i2c * );
 int bmp_press ( struct i2c * );
 
 void bmpx_init ( struct i2c * );
+int bmpx_tf ( struct i2c * );
 
 #define SEA_PRESSURE	101325
 
@@ -237,6 +238,10 @@ depth ( struct i2c *ip )
 	int p1;
 	int t1;
 	int alt;
+	int tf;
+
+	tf = bmpx_tf ( ip );
+	printf ( "BMPX temperature: %d\n", tf );
 
 	printf ( "Running screen demo on BMP180\n" );
 	/* The bmp180 driver requires us to read
@@ -302,6 +307,8 @@ main(void)
 
     printf ( "Initalize BMP\n" );
     bmp_init ( ip );
+
+    printf ( "Initalize BMPX\n" );
     bmpx_init ( ip );
 
     // gps_fail ( "INIT" );

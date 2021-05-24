@@ -543,6 +543,24 @@ _bmp388_compensate_pressure(bmp388_handle_t *handle, uint32_t data)
 }
 #endif
 
+/* What I commonly want, the current temperature in F * 100
+ */
+int
+bmpx_tf ( struct i2c *ip )
+{
+	int tt, tc, tf;
+
+	bmpx_force ( ip );
+	delay ( 200 );
+
+	tt = bmpx_temp ( ip );
+	tc = convert_temp ( tt );
+	tf = tc * 18;
+	tf = 3200 + tf / 10;
+
+	return tf;
+}
+
 void
 bmpx_diag ( struct i2c *ip )
 {
@@ -571,19 +589,19 @@ bmpx_diag ( struct i2c *ip )
 	    // bmpx_show ( ip );
 
 	    // pp = bmpx_press ( ip );
-	    // printf ( "BMP pressure = %d (%h)\n", pp, pp );
+	    // printf ( "BMPX pressure = %d (%h)\n", pp, pp );
 	    tt = bmpx_temp ( ip );
-	    printf ( "BMP raw temp = %d (%h)\n", tt, tt );
+	    printf ( "BMPX raw temp = %d (%h)\n", tt, tt );
 	    tc = convert_temp ( tt );
-	    printf ( "BMP temp (C*100) = %d\n", tc );
+	    printf ( "BMPX temp (C*100) = %d\n", tc );
 	    tf = tc * 18;
 	    tf = 3200 + tf / 10;
-	    printf ( "BMP temp (F*100) = %d\n", tf );
+	    printf ( "BMPX temp (F*100) = %d\n", tf );
 
 	    pp = bmpx_press ( ip );
-	    printf ( "BMP raw pressure = %d (%h)\n", pp, pp );
+	    printf ( "BMPX raw pressure = %d (%h)\n", pp, pp );
 	    p = convert_pressure ( pp );
-	    printf ( "BMP pressure () = %d\n", p );
+	    printf ( "BMPX pressure () = %d\n", p );
 	}
 
 #ifdef notyet
