@@ -145,7 +145,7 @@ $(foreach m,$(LIBMAPLE_MODULES),$(eval $(call LIBMAPLE_MODULE_template,$(m))))
 #SRC_FILES = gps.c i2c_ssd.c
 
 # Project 2 - my bmp180/bmp390 depth gauge
-SRC_FILES = depth.c i2c_ssd.c bmp180.c bmp390.c
+SRC_FILES = depth.c i2c_ssd.c bmp180.c bmp390.c mcp9808.c
 
 include $(SRCROOT)/build-targets.mk
 

@@ -46,6 +46,8 @@ int bmp_press ( struct i2c * );
 void bmpx_init ( struct i2c * );
 int bmpx_tf ( struct i2c * );
 
+void mcp_init ( struct i2c * );
+
 #define SEA_PRESSURE	101325
 
 int
@@ -310,6 +312,9 @@ main(void)
 
     printf ( "Initalize BMPX\n" );
     bmpx_init ( ip );
+
+    printf ( "Initalize MCP9808\n" );
+    mcp_init ( ip );
 
     // gps_fail ( "INIT" );
     // ssd_clear_all ();
